@@ -146,7 +146,8 @@ struct HistoryView: View {
         .listStyle(.inset)
         .alternatingRowBackgrounds(.enabled)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .automatic) {
+                Spacer()
                 Button("删除", systemImage: "trash") {
                     if let selectedId = selectedTaskId {
                         deleteTask(id: selectedId)
