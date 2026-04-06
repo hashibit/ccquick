@@ -4,6 +4,7 @@ import UserNotifications
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItemController: StatusItemController?
     private var inputWindowController: InputWindowController?
+    private var settingsHotkeyMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 请求通知权限
@@ -26,9 +27,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 监听 TaskManager 变化，更新菜单栏图标
         statusItemController?.startObserving()
+
+        // 注册 cmd+, 快捷键
+        registerSettingsHotkey()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return false
+    }
+
+    private func registerSettingsHotkey() {
+        // 监听本地键盘事件，拦截 cmd+,
+        settingsHotkeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if self?.isSettingsHotkey(event) == true {
+                Task { @MainActor in
+                    SettingsWindowController.shared.show()
+                }
+                return nil  // 拦截事件
+            }
+            return event
+        }
+    }
+
+    private func isSettingsHotkey(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        // cmd+, (keyCode 43)
+        return flags == .command && event.keyCode == 43
+    }
+
+    deinit {
+        if let m = settingsHotkeyMonitor {
+            NSEvent.removeMonitor(m)
+        }
     }
 }
