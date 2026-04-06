@@ -1,35 +1,33 @@
 import AppKit
 import SwiftUI
 
-class SettingsWindowController: NSWindowController {
+class SettingsWindowController: NSObject {
     static let shared = SettingsWindowController()
 
-    private var _window: NSWindow?
+    private var window: NSWindow?
 
-    private init() {
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 540, height: 480),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "设置"
-        window.center()
-        window.contentView = NSHostingView(rootView: SettingsView())
-        window.delegate = self
-        _window = window
-        super.init(window: window)
+    private override init() {
+        super.init()
     }
 
-    required init?(coder: NSCoder) { fatalError() }
-
     func show() {
-        // 只关闭 SwiftUI 的 Settings 窗口（标题为空的窗口）
-        for window in NSApp.windows {
-            if window != self.window && window.title.isEmpty && window.styleMask.contains(.titled) {
-                window.close()
-            }
+        if window == nil {
+            let view = SettingsView()
+            let hostingView = NSHostingView(rootView: view)
+
+            let newWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 540, height: 480),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            newWindow.title = "设置"
+            newWindow.center()
+            newWindow.contentView = hostingView
+            newWindow.delegate = self
+            window = newWindow
         }
+
         window?.center()
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

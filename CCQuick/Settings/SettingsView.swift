@@ -73,21 +73,31 @@ struct SettingsView: View {
                     HStack {
                         Text("打开输入窗口")
                             .frame(width: 120, alignment: .trailing)
-                        ShortcutBadge(keys: ["⌘", "", "Space"])
+                        HStack(spacing: 4) {
+                            ShortcutKey("⌘")
+                            ShortcutKey("⇧")
+                            ShortcutKey("Space")
+                        }
                         Spacer()
                     }
 
                     HStack {
                         Text("打开历史记录")
                             .frame(width: 120, alignment: .trailing)
-                        ShortcutBadge(keys: ["⌘", "H"])
+                        HStack(spacing: 4) {
+                            ShortcutKey("⌘")
+                            ShortcutKey("H")
+                        }
                         Spacer()
                     }
 
                     HStack {
                         Text("打开设置")
                             .frame(width: 120, alignment: .trailing)
-                        ShortcutBadge(keys: ["⌘", ","])
+                        HStack(spacing: 4) {
+                            ShortcutKey("⌘")
+                            ShortcutKey(",")
+                        }
                         Spacer()
                     }
                 } header: {
@@ -125,7 +135,6 @@ struct SettingsView: View {
                 }
             }
             .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
 
             // MARK: - 底部说明
             HStack(spacing: 6) {
@@ -162,34 +171,34 @@ struct SettingsView: View {
 }
 
 // MARK: - 快捷键徽章
-struct ShortcutBadge: View {
-    let keys: [String]
+struct ShortcutKey: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(keys, id: \.self) { key in
-                Text(key)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(NSColor.controlBackgroundColor), Color(NSColor.controlBackgroundColor).opacity(0.8)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 5)
-                                    .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
-                            )
-                            .shadow(color: .black.opacity(0.1), radius: 0.5, x: 0, y: 1)
+        Text(text)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(.primary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(NSColor.controlBackgroundColor), Color(NSColor.controlBackgroundColor).opacity(0.8)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                     )
-            }
-        }
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.1), radius: 0.5, x: 0, y: 1)
+            )
     }
 }
 
