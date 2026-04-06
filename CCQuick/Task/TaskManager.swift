@@ -1,11 +1,12 @@
 import Foundation
-import Combine
 
-class TaskManager: ObservableObject {
+@MainActor
+@Observable
+class TaskManager {
     static let shared = TaskManager()
 
-    @Published private(set) var runningTasks: [CCTask] = []
-    @Published private(set) var unviewedTasks: [CCTask] = []
+    private(set) var runningTasks: [CCTask] = []
+    private(set) var unviewedTasks: [CCTask] = []
 
     var onTaskCompleted: ((CCTask) -> Void)?
 
@@ -31,14 +32,18 @@ class TaskManager: ObservableObject {
             prompt: trimmed,
             workDir: workDir,
             status: .running,
-            startedAt: Date(),
+            startedAt: .now,
             finishedAt: nil,
             response: "",
             viewed: false
         )
 
         runningTasks.append(task)
-        try? TaskStore.shared.save(task)
+        do {
+            try TaskStore.shared.save(task)
+        } catch {
+            print("Failed to save task: \(error)")
+        }
 
         TaskRunner.run(task: task, onOutput: { _ in
             // 可用于实时更新输出（暂未使用）
@@ -48,7 +53,11 @@ class TaskManager: ObservableObject {
             if completed.status == .completed {
                 self.unviewedTasks.append(completed)
             }
-            try? TaskStore.shared.save(completed)
+            do {
+                try TaskStore.shared.save(completed)
+            } catch {
+                print("Failed to save completed task: \(error)")
+            }
             self.onTaskCompleted?(completed)
         })
     }
@@ -56,7 +65,11 @@ class TaskManager: ObservableObject {
     func markViewed(taskId: String) {
         guard var task = unviewedTasks.first(where: { $0.id == taskId }) else { return }
         task.viewed = true
-        try? TaskStore.shared.save(task)
+        do {
+            try TaskStore.shared.save(task)
+        } catch {
+            print("Failed to mark task as viewed: \(error)")
+        }
         unviewedTasks.removeAll { $0.id == taskId }
     }
 

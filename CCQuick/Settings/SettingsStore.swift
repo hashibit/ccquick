@@ -33,10 +33,12 @@ struct AppSettings: Codable {
 }
 
 // ObservableObject 包装，供 SwiftUI 绑定
-class SettingsStore: ObservableObject {
-    @Published var apiBase: String
-    @Published var apiKey: String
-    @Published var model: String
+@MainActor
+@Observable
+class SettingsStore {
+    var apiBase: String
+    var apiKey: String
+    var model: String
 
     static let shared = SettingsStore()
 

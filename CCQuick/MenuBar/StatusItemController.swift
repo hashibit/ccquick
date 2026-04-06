@@ -1,10 +1,9 @@
 import AppKit
-import Combine
 
+@MainActor
 class StatusItemController {
     private let statusItem: NSStatusItem
     let taskManager = TaskManager.shared
-    private var cancellables = Set<AnyCancellable>()
     private var animationTimer: Timer?
     private var animationFrame = 0
 
@@ -19,13 +18,21 @@ class StatusItemController {
     }
 
     func startObserving() {
-        taskManager.$runningTasks
-            .combineLatest(taskManager.$unviewedTasks)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] running, unviewed in
-                self?.onStateChanged(running: running, unviewed: unviewed)
+        // 使用 Observation 框架的 withObservationTracking 来监听变化
+        Task {
+            while true {
+                withObservationTracking {
+                    _ = taskManager.runningTasks
+                    _ = taskManager.unviewedTasks
+                } onChange: { [weak self] in
+                    Task { @MainActor in
+                        self?.onStateChanged()
+                    }
+                }
+                // 等待变化触发后继续
+                try? await Task.sleep(for: .seconds(0.1))
             }
-            .store(in: &cancellables)
+        }
 
         taskManager.onTaskCompleted = { [weak self] task in
             NotificationService.shared.notify(task: task)
@@ -33,11 +40,11 @@ class StatusItemController {
         }
     }
 
-    private func onStateChanged(running: [CCTask], unviewed: [CCTask]) {
-        if running.isEmpty {
-            stopAnimation()
-        } else {
+    private func onStateChanged() {
+        if taskManager.hasRunning {
             startAnimation()
+        } else {
+            stopAnimation()
         }
         updateIcon()
     }
@@ -102,6 +109,13 @@ class StatusItemController {
 
     private func startAnimation() {
         guard animationTimer == nil else { return }
+
+        // 检查用户是否启用了 Reduce Motion
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            updateIcon()
+            return
+        }
+
         animationTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             self.animationFrame += 1

@@ -22,7 +22,7 @@ struct CCTask: Identifiable, Codable, Hashable {
     }
 
     var elapsedSeconds: Int {
-        Int((finishedAt ?? Date()).timeIntervalSince(startedAt))
+        Int((finishedAt ?? .now).timeIntervalSince(startedAt))
     }
 
     var elapsedString: String {

@@ -19,7 +19,7 @@ class InputWindowController: NSObject {
 
     private func setupPanel() {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 620, height: 64),
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 56),
             styleMask: [.titled, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -28,7 +28,7 @@ class InputWindowController: NSObject {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        panel.hasShadow = false  // 禁用系统阴影，我们自己画
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isMovableByWindowBackground = true
@@ -44,7 +44,7 @@ class InputWindowController: NSObject {
         }
 
         let hostingView = NSHostingView(rootView: inputView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 620, height: 64)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 600, height: 56)
         hostingView.autoresizingMask = [.width, .height]
         panel.contentView = hostingView
 
@@ -73,13 +73,13 @@ class InputWindowController: NSObject {
 
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if self?.isHotkey(event) == true {
-                DispatchQueue.main.async { self?.toggle() }
+                Task { @MainActor in self?.toggle() }
             }
         }
 
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if self?.isHotkey(event) == true {
-                DispatchQueue.main.async { self?.toggle() }
+                Task { @MainActor in self?.toggle() }
                 return nil
             }
             return event

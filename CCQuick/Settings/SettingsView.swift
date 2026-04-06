@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @ObservedObject private var store = SettingsStore.shared
+    @Bindable private var store = SettingsStore.shared
     @State private var tempApiBase: String = ""
     @State private var tempApiKey: String = ""
     @State private var tempModel: String = ""

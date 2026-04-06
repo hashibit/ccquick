@@ -5,6 +5,12 @@ class TaskStore {
 
     let baseDir: URL
 
+    private static let idFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyyMMddHHmm"
+        return f
+    }()
+
     private init() {
         baseDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".ccquick")
@@ -47,9 +53,7 @@ class TaskStore {
     }
 
     func makeTaskId(prompt: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMddHHmm"
-        let timestamp = formatter.string(from: Date())
+        let timestamp = Self.idFormatter.string(from: .now)
         let slug = prompt
             .lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.union(.init(charactersIn: "-")).inverted)
@@ -57,5 +61,10 @@ class TaskStore {
             .joined(separator: "-")
             .prefix(30)
         return "\(timestamp)-\(slug.isEmpty ? "task" : String(slug))"
+    }
+
+    func delete(id: String) {
+        let dir = baseDir.appendingPathComponent(id)
+        try? FileManager.default.removeItem(at: dir)
     }
 }

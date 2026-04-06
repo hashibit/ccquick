@@ -41,8 +41,8 @@ class TaskRunner {
             var failed = task
             failed.status = .failed
             failed.response = "找不到 claude CLI。请确认已通过 npm install -g @anthropic-ai/claude-code 安装并在 PATH 中。"
-            failed.finishedAt = Date()
-            DispatchQueue.main.async { onComplete(failed) }
+            failed.finishedAt = .now
+            Task { @MainActor in onComplete(failed) }
             return
         }
 
@@ -82,7 +82,7 @@ class TaskRunner {
             let data = handle.availableData
             guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
             buffer += text
-            DispatchQueue.main.async { onOutput(text) }
+            Task { @MainActor in onOutput(text) }
         }
 
         process.terminationHandler = { p in
@@ -94,9 +94,9 @@ class TaskRunner {
             }
             var completed = task
             completed.response = buffer
-            completed.finishedAt = Date()
+            completed.finishedAt = .now
             completed.status = (p.terminationStatus == 0) ? .completed : .failed
-            DispatchQueue.main.async { onComplete(completed) }
+            Task { @MainActor in onComplete(completed) }
         }
 
         do {
@@ -105,8 +105,8 @@ class TaskRunner {
             var failed = task
             failed.status = .failed
             failed.response = "启动失败：\(error.localizedDescription)"
-            failed.finishedAt = Date()
-            DispatchQueue.main.async { onComplete(failed) }
+            failed.finishedAt = .now
+            Task { @MainActor in onComplete(failed) }
         }
     }
 }

@@ -11,7 +11,8 @@ class HistoryWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "CCQuick 历史记录"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
         window.center()
         window.contentView = NSHostingView(rootView: HistoryView())
         window.minSize = NSSize(width: 800, height: 500)
