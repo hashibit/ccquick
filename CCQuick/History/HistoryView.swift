@@ -2,6 +2,7 @@ import SwiftUI
 
 extension Notification.Name {
     static let selectHistoryTask = Notification.Name("selectHistoryTask")
+    static let deleteSelectedHistoryTask = Notification.Name("deleteSelectedHistoryTask")
 }
 
 // MARK: - 分组枚举
@@ -64,16 +65,17 @@ struct HistoryView: View {
             // 右侧详情
             detailView
                 .background(Color(NSColor.textBackgroundColor))
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("新建任务", systemImage: "square.and.pencil") {
+                            InputWindowController.shared.show()
+                        }
+                        .help("新建任务 (⌘⇧Space)")
+                    }
+                }
         }
         .navigationSplitViewStyle(.balanced)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button("新建任务", systemImage: "square.and.pencil") {
-                    InputWindowController.shared.show()
-                }
-                .help("新建任务 (⌘⇧Space)")
-            }
-        }
+        .ignoresSafeArea()
         .onAppear {
             loadLayoutConfig()
             reload()
@@ -82,6 +84,11 @@ struct HistoryView: View {
         .onChange(of: taskManager.unviewedTasks.count) { reload() }
         .onChange(of: searchText) { updateFilteredTasks() }
         .onChange(of: selectedGroup) { updateFilteredTasks() }
+        .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedHistoryTask)) { _ in
+            if let selectedId = selectedTaskId {
+                deleteTask(id: selectedId)
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .selectHistoryTask)) { notif in
             guard let taskId = notif.userInfo?["taskId"] as? String else { return }
             reload()
@@ -192,7 +199,6 @@ struct HistoryView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(NSColor.textBackgroundColor))
         }
     }
 
