@@ -16,13 +16,14 @@ class SettingsWindowController: NSObject {
             let hostingView = NSHostingView(rootView: view)
 
             let newWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 540, height: 480),
-                styleMask: [.titled, .closable],
+                contentRect: NSRect(x: 0, y: 0, width: 550, height: 520),
+                styleMask: [.titled, .closable, .resizable],
                 backing: .buffered,
                 defer: false
             )
             newWindow.title = "设置"
             newWindow.center()
+            newWindow.minSize = NSSize(width: 500, height: 400)
             newWindow.contentView = hostingView
             newWindow.delegate = self
             window = newWindow

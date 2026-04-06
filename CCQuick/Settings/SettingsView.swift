@@ -5,151 +5,86 @@ struct SettingsView: View {
     @State private var tempApiBase: String = ""
     @State private var tempApiKey: String = ""
     @State private var tempModel: String = ""
-
     @State private var selectedAccount = "API"
-    @State private var sortBy = "editDate"
-    @State private var groupByDate = true
-    @State private var alwaysReturnToLast = false
-    @State private var autoSortChecked = false
     @State private var allowMentions = true
-    @State private var enableMacAccount = false
-    @State private var textSize: Double = 0.4
+    @State private var alwaysReturnToLast = false
+    @State private var textSize: Double = 0.5
 
     let accounts = ["API", "Claude Code CLI"]
-    let sortOptions = ["编辑日期", "创建日期", "标题"]
 
     var body: some View {
-        VStack(spacing: 0) {
-            Form {
-                // MARK: - API 配置
-                Section {
-                    Picker("默认账户", selection: $selectedAccount) {
-                        ForEach(accounts, id: \.self) { account in
-                            Text(account).tag(account)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // MARK: - 账户配置
+                SettingsSection(title: "账户配置") {
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text("默认账户")
+                                .frame(width: 120, alignment: .trailing)
+                            Spacer()
+                            Picker("", selection: $selectedAccount) {
+                                ForEach(accounts, id: \.self) { account in
+                                    Text(account).tag(account)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            .frame(width: 200)
+                        }
+
+                        if selectedAccount == "API" {
+                            SettingRow(title: "API Base URL", value: $tempApiBase, placeholder: "https://api.anthropic.com")
+                            SettingRow(title: "API Key", value: $tempApiKey, isSecure: true, placeholder: "sk-ant-...")
+                            SettingRow(title: "Model", value: $tempModel, placeholder: "claude-sonnet-4-20250514")
+                        } else {
+                            HStack(spacing: 8) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                                Text("使用 Claude Code CLI 默认配置")
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
-                    .pickerStyle(.menu)
-
-                    if selectedAccount == "API" {
-                        HStack {
-                            Text("API Base URL")
-                                .frame(width: 120, alignment: .trailing)
-                            TextField("https://api.anthropic.com", text: $tempApiBase)
-                                .textFieldStyle(.plain)
-                                .frame(maxWidth: .infinity)
-                        }
-
-                        HStack {
-                            Text("API Key")
-                                .frame(width: 120, alignment: .trailing)
-                            SecureField("sk-ant-…", text: $tempApiKey)
-                                .textFieldStyle(.plain)
-                                .frame(maxWidth: .infinity)
-                        }
-
-                        HStack {
-                            Text("Model")
-                                .frame(width: 120, alignment: .trailing)
-                            TextField("claude-sonnet-4-20250514", text: $tempModel)
-                                .textFieldStyle(.plain)
-                                .frame(maxWidth: .infinity)
-                        }
-                    } else {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.secondary)
-                            Text("使用 Claude Code CLI 默认配置")
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 4)
-                    }
-                } header: {
-                    Label("账户配置", systemImage: "person.circle")
                 }
 
                 // MARK: - 快捷键
-                Section {
-                    HStack {
-                        Text("打开输入窗口")
-                            .frame(width: 120, alignment: .trailing)
-                        HStack(spacing: 4) {
-                            ShortcutKey("⌘")
-                            ShortcutKey("⇧")
-                            ShortcutKey("Space")
-                        }
-                        Spacer()
+                SettingsSection(title: "快捷键") {
+                    VStack(spacing: 0) {
+                        ShortcutRow(title: "打开输入窗口", keys: ["⌘", "", "Space"])
+                        Divider()
+                        ShortcutRow(title: "打开历史记录", keys: ["⌘", "H"])
+                        Divider()
+                        ShortcutRow(title: "打开设置", keys: ["⌘", ","])
                     }
-
-                    HStack {
-                        Text("打开历史记录")
-                            .frame(width: 120, alignment: .trailing)
-                        HStack(spacing: 4) {
-                            ShortcutKey("⌘")
-                            ShortcutKey("H")
-                        }
-                        Spacer()
-                    }
-
-                    HStack {
-                        Text("打开设置")
-                            .frame(width: 120, alignment: .trailing)
-                        HStack(spacing: 4) {
-                            ShortcutKey("⌘")
-                            ShortcutKey(",")
-                        }
-                        Spacer()
-                    }
-                } header: {
-                    Label("快捷键", systemImage: "keyboard")
                 }
 
                 // MARK: - 行为
-                Section {
-                    Toggle("启用通知", isOn: $allowMentions)
-
-                    Toggle("任务完成后自动标记为已查看", isOn: $alwaysReturnToLast)
-                } header: {
-                    Label("行为", systemImage: "gearshape")
+                SettingsSection(title: "行为") {
+                    VStack(spacing: 0) {
+                        ToggleRow(title: "启用通知", isOn: $allowMentions)
+                        Divider()
+                        ToggleRow(title: "任务完成后自动标记为已查看", isOn: $alwaysReturnToLast)
+                    }
                 }
 
-                // MARK: - 文本大小
-                Section {
+                // MARK: - 外观
+                SettingsSection(title: "外观") {
                     HStack {
                         Text("默认文本大小")
-                            .frame(width: 120, alignment: .trailing)
+                            .frame(width: 120)
+                        Spacer()
                         Slider(value: $textSize, in: 0...1)
-                            .labelsHidden()
                             .frame(width: 200)
-                        HStack {
-                            Text("小")
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Text("大")
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(width: 60)
+                        Text("中")
+                            .foregroundColor(.secondary)
+                            .frame(width: 30)
                     }
-                } header: {
-                    Label("外观", systemImage: "textformat.size")
+                    .padding(.vertical, 8)
                 }
             }
-            .formStyle(.grouped)
-
-            // MARK: - 底部说明
-            HStack(spacing: 6) {
-                Image(systemName: "info.circle.fill")
-                    .font(.caption)
-                Text("API 必须兼容 Claude Code CLI（支持 ANTHROPIC_BASE_URL、ANTHROPIC_MODEL、ANTHROPIC_AUTH_TOKEN 环境变量）")
-                    .font(.caption)
-                Spacer()
-            }
-            .foregroundColor(.secondary)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Color(NSColor.windowBackgroundColor))
+            .padding(24)
         }
-        .frame(width: 540, height: 480)
+        .frame(width: 550, height: 500)
         .onAppear {
             tempApiBase = store.apiBase
             tempApiKey = store.apiKey
@@ -170,35 +105,121 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - 快捷键徽章
-struct ShortcutKey: View {
-    let text: String
+// MARK: - 设置分组
 
-    init(_ text: String) {
-        self.text = text
+struct SettingsSection<Content: View>: View {
+    let title: String
+    let content: Content
+
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
     }
 
     var body: some View {
-        Text(text)
-            .font(.system(size: 11, weight: .medium))
-            .foregroundColor(.primary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.primary)
+
+            SectionCard {
+                content
+            }
+        }
+    }
+}
+
+// MARK: - 卡片容器
+
+struct SectionCard<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(NSColor.controlBackgroundColor), Color(NSColor.controlBackgroundColor).opacity(0.8)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 5)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
-                    )
-                    .shadow(color: .black.opacity(0.1), radius: 0.5, x: 0, y: 1)
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(NSColor.controlBackgroundColor))
             )
+    }
+}
+
+// MARK: - 设置行
+
+struct SettingRow: View {
+    let title: String
+    @Binding var value: String
+    var isSecure: Bool = false
+    let placeholder: String
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .frame(width: 120, alignment: .trailing)
+            Spacer()
+            if isSecure {
+                SecureField(placeholder, text: $value)
+                    .frame(width: 250)
+            } else {
+                TextField(placeholder, text: $value)
+                    .frame(width: 250)
+            }
+        }
+    }
+}
+
+// MARK: - 快捷键行
+
+struct ShortcutRow: View {
+    let title: String
+    let keys: [String]
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer()
+            HStack(spacing: 6) {
+                ForEach(keys, id: \.self) { key in
+                    if !key.isEmpty {
+                        Text(key)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color(NSColor.windowBackgroundColor))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
+                                    )
+                            )
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+// MARK: - Toggle 行
+
+struct ToggleRow: View {
+    let title: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
+        }
+        .padding(.vertical, 8)
     }
 }
 
