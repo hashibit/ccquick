@@ -342,11 +342,19 @@ struct TaskDetailView: View {
                 // 内容区
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(taskContent(t.response))
-                            .font(.system(.body, design: .monospaced))
-                            .textSelection(.enabled)
-                            .padding(20)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        if let response = task?.response, !response.isEmpty {
+                            // 使用 Markdown 渲染
+                            Text(.init(response))
+                                .font(.body)
+                                .textSelection(.enabled)
+                                .padding(20)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            Text("（无输出）")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                                .padding(20)
+                        }
                     }
                 }
 
@@ -476,10 +484,6 @@ struct TaskDetailView: View {
     }
 
     // MARK: - 辅助方法
-
-    private func taskContent(_ response: String) -> String {
-        response.isEmpty ? "（无输出）" : response
-    }
 
     private func refresh() {
         if let running = taskManager.runningTasks.first(where: { $0.id == taskId }) {

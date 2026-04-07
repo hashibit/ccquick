@@ -8,6 +8,7 @@ class InputWindowController: NSObject {
     private var panel: NSPanel?
     private var globalMonitor: Any?
     private var localMonitor: Any?
+    private var escapeMonitor: Any?
 
     var onSubmit: ((String) -> Void)?
 
@@ -20,21 +21,19 @@ class InputWindowController: NSObject {
     private func setupPanel() {
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 600, height: 56),
-            styleMask: [.titled, .fullSizeContentView],
+            styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
         panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = false  // 禁用系统阴影，我们自己画
+        panel.hasShadow = false
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
-        panel.isMovableByWindowBackground = true
-        panel.standardWindowButton(.closeButton)?.isHidden = true
-        panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        panel.standardWindowButton(.zoomButton)?.isHidden = true
+        panel.isMovableByWindowBackground = false
+        panel.hidesOnDeactivate = false
 
         let inputView = InputView { [weak self] prompt in
             self?.hide()
@@ -50,6 +49,17 @@ class InputWindowController: NSObject {
 
         self.panel = panel
         centerPanel()
+
+        // 监听面板内的 ESC 键
+        escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.keyCode == 53, // ESC
+               let window = event.window,
+               window === self?.panel {
+                self?.hide()
+                return nil
+            }
+            return event
+        }
     }
 
     private func centerPanel() {
@@ -127,5 +137,6 @@ class InputWindowController: NSObject {
     deinit {
         if let m = globalMonitor { NSEvent.removeMonitor(m) }
         if let m = localMonitor { NSEvent.removeMonitor(m) }
+        if let m = escapeMonitor { NSEvent.removeMonitor(m) }
     }
 }
