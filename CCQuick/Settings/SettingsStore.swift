@@ -98,10 +98,11 @@ struct CodingPlanProvider: Codable {
         // Anthropic 兼容 API，Bearer 认证
         CodingPlanProvider(name: "百炼", baseURL: "https://coding.dashscope.aliyuncs.com/apps/anthropic", model: "qwen3-coder-plus", keyPrefixes: ["sk-sp-"], apiType: .anthropic, authType: .bearer),
         // OpenAI 兼容 API
-        CodingPlanProvider(name: "Kimi", baseURL: "https://api.moonshot.cn/v1", model: "moonshot-v1-8k", keyPrefixes: ["sk-"], apiType: .openai, authType: .bearer),
-        CodingPlanProvider(name: "通义千问", baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-turbo", keyPrefixes: ["sk-"], apiType: .openai, authType: .bearer),
+        CodingPlanProvider(name: "Kimi", baseURL: "https://api.moonshot.cn/v1", model: "kimi-k2.5", keyPrefixes: ["sk-"], apiType: .openai, authType: .bearer),
+        CodingPlanProvider(name: "通义千问", baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen3-coder-plus", keyPrefixes: ["sk-"], apiType: .openai, authType: .bearer),
         CodingPlanProvider(name: "DeepSeek", baseURL: "https://api.deepseek.com", model: "deepseek-chat", keyPrefixes: ["sk-"], apiType: .openai, authType: .bearer),
-        CodingPlanProvider(name: "智谱", baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-4-flash", keyPrefixes: ["."], apiType: .openai, authType: .bearer),
+        CodingPlanProvider(name: "智谱", baseURL: "https://open.bigmodel.cn/api/anthropic", model: "glm-4.5-air", keyPrefixes: ["."], apiType: .anthropic, authType: .bearer),
+        CodingPlanProvider(name: "MiniMax", baseURL: "https://api.minimaxi.com/anthropic", model: "MiniMax-M2.7", keyPrefixes: [""], apiType: .anthropic, authType: .bearer),
     ]
 
     static func matchProviders(for apiKey: String) -> [CodingPlanProvider] {
