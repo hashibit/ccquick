@@ -1,4 +1,5 @@
 import SwiftUI
+import MarkdownUI
 
 extension Notification.Name {
     static let selectHistoryTask = Notification.Name("selectHistoryTask")
@@ -343,9 +344,9 @@ struct TaskDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         if let response = task?.response, !response.isEmpty {
-                            // 使用 Markdown 渲染
-                            Text(.init(response))
-                                .font(.body)
+                            // 使用 MarkdownUI 渲染
+                            Markdown(response)
+                                .markdownTheme(.gitHub)
                                 .textSelection(.enabled)
                                 .padding(20)
                                 .frame(maxWidth: .infinity, alignment: .leading)
