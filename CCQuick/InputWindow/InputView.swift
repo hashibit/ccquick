@@ -24,7 +24,8 @@ struct InputView: View {
                     onSubmit(trimmed)
                     text = ""
                 },
-                onEscape: onCancel
+                onEscape: onCancel,
+                onClear: { text = "" }
             )
 
             // 发送按钮
@@ -62,8 +63,9 @@ struct FocusableTextField: NSViewRepresentable {
     @Binding var text: String
     let onSubmit: () -> Void
     let onEscape: () -> Void
+    let onClear: () -> Void
 
-    func makeNSView(context: Context) -> NSTextField {
+    func makeNSView(context: Context) -> FocusableNSTextField {
         let textField = FocusableNSTextField()
         textField.placeholderString = placeholder
         textField.delegate = context.coordinator
@@ -77,16 +79,13 @@ struct FocusableTextField: NSViewRepresentable {
         return textField
     }
 
-    func updateNSView(_ nsView: NSTextField, context: Context) {
-        nsView.stringValue = text
-        (nsView as? FocusableNSTextField)?.onSubmit = onSubmit
-        (nsView as? FocusableNSTextField)?.onEscape = onEscape
-        // 每次更新时尝试获得焦点
-        DispatchQueue.main.async {
-            if let window = nsView.window, window.isKeyWindow {
-                window.makeFirstResponder(nsView)
-            }
+    func updateNSView(_ nsView: FocusableNSTextField, context: Context) {
+        // 只在文本真正不同时才更新（避免输入时光标跳转/全选）
+        if nsView.stringValue != text {
+            nsView.stringValue = text
         }
+        nsView.onSubmit = onSubmit
+        nsView.onEscape = onEscape
     }
 
     func makeCoordinator() -> Coordinator {
@@ -95,6 +94,7 @@ struct FocusableTextField: NSViewRepresentable {
 
     class Coordinator: NSObject, NSTextFieldDelegate {
         let parent: FocusableTextField
+        private var isEditing = false
 
         init(_ parent: FocusableTextField) {
             self.parent = parent
@@ -102,12 +102,21 @@ struct FocusableTextField: NSViewRepresentable {
 
         func controlTextDidChange(_ obj: Notification) {
             guard let textField = obj.object as? NSTextField else { return }
+            isEditing = true
             parent.text = textField.stringValue
+            isEditing = false
         }
 
         func controlTextDidEndEditing(_ obj: Notification) {
             guard let textField = obj.object as? NSTextField else { return }
-            parent.text = textField.stringValue
+            if !isEditing {
+                parent.text = textField.stringValue
+            }
+        }
+
+        // 提交后清空文本
+        func handleSubmit() {
+            parent.onSubmit()
         }
     }
 }
@@ -124,5 +133,17 @@ class FocusableNSTextField: NSTextField {
         } else {
             super.keyDown(with: event)
         }
+    }
+
+    // 确保获得焦点
+    override func becomeFirstResponder() -> Bool {
+        let result = super.becomeFirstResponder()
+        if result {
+            // 将光标移到末尾
+            if let editor = currentEditor() {
+                editor.selectedRange = NSRange(location: stringValue.count, length: 0)
+            }
+        }
+        return result
     }
 }

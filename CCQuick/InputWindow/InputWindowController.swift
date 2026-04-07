@@ -152,14 +152,15 @@ class InputWindowController: NSObject {
         centerPanel()
         panel?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        // 让 textField 成为 first responder
+        // 让 textField 成为 first responder，并将光标移到末尾
         DispatchQueue.main.async {
-            if let contentView = self.panel?.contentView {
-                for subview in contentView.subviews {
-                    if let textField = self.findTextField(in: subview) {
-                        self.panel?.makeFirstResponder(textField)
-                        break
-                    }
+            if let contentView = self.panel?.contentView,
+               let textField = self.findTextField(in: contentView) {
+                self.panel?.makeFirstResponder(textField)
+                // 将光标移到末尾
+                if let editor = textField.currentEditor() {
+                    let len = textField.stringValue.count
+                    editor.selectedRange = NSRange(location: len, length: 0)
                 }
             }
         }
