@@ -4,27 +4,17 @@ import SwiftUI
 struct CCQuickApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    init() {
-        // 在应用启动时立即隐藏 SwiftUI 创建的窗口
-        DispatchQueue.main.async {
-            if let window = NSApp.windows.first {
-                window.orderOut(nil)
-            }
+    var body: some Scene {
+        // 使用 Settings 而非 WindowGroup，不会创建默认窗口
+        Settings {
+            EmptyView()
         }
     }
+}
 
-    var body: some Scene {
-        // 不需要任何 Scene，完全使用 AppKit
-        // 但 SwiftUI 要求至少一个 Scene，所以创建一个隐藏的
-        WindowGroup {
-            Color.clear
-                .frame(width: 1, height: 1)
-                .onAppear {
-                    if let window = NSApp.windows.first {
-                        window.orderOut(nil)
-                    }
-                }
-        }
-        .windowStyle(.hiddenTitleBar)
+private struct EmptyView: View {
+    var body: some View {
+        // 空视图，不会显示
+        Color.clear.frame(width: 0, height: 0)
     }
 }

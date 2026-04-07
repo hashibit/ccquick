@@ -31,17 +31,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 注册 cmd+, 快捷键
         registerSettingsHotkey()
-
-        // 关闭 SwiftUI 创建的空白窗口
-        DispatchQueue.main.async {
-            for window in NSApp.windows.reversed() {
-                // 检查是否是 SwiftUI 的 NSHostingView 或空内容
-                if window.contentView is NSHostingView<AnyView> ||
-                   (window.contentView?.subviews.isEmpty == true && window.styleMask.contains(.titled)) {
-                    window.close()
-                }
-            }
-        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
