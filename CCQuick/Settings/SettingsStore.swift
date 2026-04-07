@@ -79,10 +79,17 @@ enum ExecutionAccount: String, Codable, CaseIterable {
 struct CodingPlanProvider: Codable {
     let name: String
     let baseURL: String
-    let model: String
     let keyPrefixes: [String]
     let apiType: APIType
     let authType: AuthType
+
+    // 多层次模型
+    let haikuModel: String    // 快速判断/简单回复
+    let sonnetModel: String   // 标准任务
+    let opusModel: String     // 复杂任务
+
+    // 兼容旧配置读取
+    var model: String { sonnetModel }
 
     enum APIType: String, Codable {
         case anthropic  // Anthropic 兼容 API (路径: /v1/messages)
@@ -95,14 +102,72 @@ struct CodingPlanProvider: Codable {
     }
 
     static let providers: [CodingPlanProvider] = [
-        // Anthropic 兼容 API，Bearer 认证
-        CodingPlanProvider(name: "百炼", baseURL: "https://coding.dashscope.aliyuncs.com/apps/anthropic", model: "qwen3-coder-plus", keyPrefixes: ["sk-sp-"], apiType: .anthropic, authType: .bearer),
-        // OpenAI 兼容 API
-        CodingPlanProvider(name: "Kimi", baseURL: "https://api.moonshot.cn/v1", model: "kimi-k2.5", keyPrefixes: ["sk-"], apiType: .openai, authType: .bearer),
-        CodingPlanProvider(name: "通义千问", baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen3-coder-plus", keyPrefixes: ["sk-"], apiType: .openai, authType: .bearer),
-        CodingPlanProvider(name: "DeepSeek", baseURL: "https://api.deepseek.com", model: "deepseek-chat", keyPrefixes: ["sk-"], apiType: .openai, authType: .bearer),
-        CodingPlanProvider(name: "智谱", baseURL: "https://open.bigmodel.cn/api/anthropic", model: "glm-4.5-air", keyPrefixes: ["."], apiType: .anthropic, authType: .bearer),
-        CodingPlanProvider(name: "MiniMax", baseURL: "https://api.minimaxi.com/anthropic", model: "MiniMax-M2.7", keyPrefixes: [""], apiType: .anthropic, authType: .bearer),
+        // 百炼 (Anthropic 兼容)
+        CodingPlanProvider(
+            name: "百炼",
+            baseURL: "https://coding.dashscope.aliyuncs.com/apps/anthropic",
+            keyPrefixes: ["sk-sp-"],
+            apiType: .anthropic,
+            authType: .bearer,
+            haikuModel: "qwen3-coder-plus",
+            sonnetModel: "qwen3.5-plus",
+            opusModel: "qwen3-max-2026-01-23"
+        ),
+        // Kimi (OpenAI 兼容)
+        CodingPlanProvider(
+            name: "Kimi",
+            baseURL: "https://api.moonshot.cn/v1",
+            keyPrefixes: ["sk-"],
+            apiType: .openai,
+            authType: .bearer,
+            haikuModel: "moonshot-v1-8k",
+            sonnetModel: "kimi-k2.5",
+            opusModel: "kimi-k2.5"
+        ),
+        // 通义千问 (OpenAI 兼容)
+        CodingPlanProvider(
+            name: "通义千问",
+            baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            keyPrefixes: ["sk-"],
+            apiType: .openai,
+            authType: .bearer,
+            haikuModel: "qwen3-coder-plus",
+            sonnetModel: "qwen3.5-plus",
+            opusModel: "qwen3-max-2026-01-23"
+        ),
+        // DeepSeek (OpenAI 兼容)
+        CodingPlanProvider(
+            name: "DeepSeek",
+            baseURL: "https://api.deepseek.com",
+            keyPrefixes: ["sk-"],
+            apiType: .openai,
+            authType: .bearer,
+            haikuModel: "deepseek-chat",
+            sonnetModel: "deepseek-chat",
+            opusModel: "deepseek-chat"
+        ),
+        // 智谱 (Anthropic 兼容)
+        CodingPlanProvider(
+            name: "智谱",
+            baseURL: "https://open.bigmodel.cn/api/anthropic",
+            keyPrefixes: ["."],
+            apiType: .anthropic,
+            authType: .bearer,
+            haikuModel: "glm-4.5-air",
+            sonnetModel: "glm-4.7",
+            opusModel: "glm-4.7"
+        ),
+        // MiniMax (Anthropic 兼容)
+        CodingPlanProvider(
+            name: "MiniMax",
+            baseURL: "https://api.minimaxi.com/anthropic",
+            keyPrefixes: [""],
+            apiType: .anthropic,
+            authType: .bearer,
+            haikuModel: "MiniMax-M2.7",
+            sonnetModel: "MiniMax-M2.7",
+            opusModel: "MiniMax-M2.7"
+        ),
     ]
 
     static func matchProviders(for apiKey: String) -> [CodingPlanProvider] {
@@ -241,9 +306,9 @@ class AvailabilityChecker: ObservableObject {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
 
-        // 请求体格式相同
+        // 请求体格式相同，用 haikuModel 进行快速检测
         let body: [String: Any] = [
-            "model": provider.model,
+            "model": provider.haikuModel,
             "max_tokens": 1,
             "messages": [["role": "user", "content": "Hi"]]
         ]

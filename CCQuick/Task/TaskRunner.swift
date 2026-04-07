@@ -30,6 +30,122 @@ class TaskRunner {
         return (result?.isEmpty == false) ? result : nil
     }
 
+    /// 带计划的执行（第二阶段）
+    /// - Parameters:
+    ///   - task: 任务
+    ///   - plan: 第一阶段生成的执行计划
+    ///   - onOutput: 流式输出回调
+    ///   - onComplete: 任务结束回调
+    static func runWithPlan(
+        task: CCTask,
+        plan: String,
+        onOutput: @escaping (String) -> Void,
+        onComplete: @escaping (CCTask) -> Void
+    ) {
+        guard let claudePath = findClaudePath() else {
+            var failed = task
+            failed.status = .failed
+            failed.response = "找不到 claude CLI。请确认已通过 npm install -g @anthropic-ai/claude-code 安装并在 PATH 中。"
+            failed.finishedAt = .now
+            Task { @MainActor in onComplete(failed) }
+            return
+        }
+
+        let workDir = URL(fileURLWithPath: task.workDir)
+        try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
+
+        // 写入初始上下文文件
+        let contextContent = """
+        # 任务
+
+        \(task.prompt)
+
+        # 执行计划
+
+        \(plan)
+
+        请按照执行计划逐步完成任务。
+        """
+        let contextFile = workDir.appendingPathComponent("initial_context.md")
+        try? contextContent.write(to: contextFile, atomically: true, encoding: .utf8)
+        logInfo("写入初始上下文: \(contextFile.path)", category: "Task")
+
+        // 写入 prompt 文件
+        let promptFile = workDir.appendingPathComponent("prompt.txt")
+        try? task.prompt.write(to: promptFile, atomically: true, encoding: .utf8)
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: claudePath)
+
+        // 构建带计划的 prompt
+        let enhancedPrompt = """
+        用户请求：\(task.prompt)
+
+        建议的执行计划：
+        \(plan)
+
+        请按照这个计划执行任务。
+        """
+        process.arguments = ["--dangerously-skip-permissions", "-p", enhancedPrompt]
+        process.currentDirectoryURL = workDir
+
+        // 设置环境变量
+        var env = ProcessInfo.processInfo.environment
+        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(env["PATH"] ?? "")"
+
+        // 根据执行账户类型设置环境变量
+        let settings = AppSettings.current
+        if settings.executionAccount == .codingPlan {
+            let apiKey = settings.codingPlanApiKey.trimmingCharacters(in: .whitespaces)
+            if !apiKey.isEmpty {
+                let providers = CodingPlanProvider.matchProviders(for: apiKey)
+                if let provider = providers.first {
+                    env["ANTHROPIC_BASE_URL"] = provider.baseURL
+                    env["ANTHROPIC_MODEL"] = provider.sonnetModel  // 复杂任务用 sonnet
+                    env["ANTHROPIC_AUTH_TOKEN"] = apiKey
+                }
+            }
+        }
+
+        process.environment = env
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+
+        var buffer = ""
+
+        pipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
+            buffer += text
+            Task { @MainActor in onOutput(text) }
+        }
+
+        process.terminationHandler = { p in
+            pipe.fileHandleForReading.readabilityHandler = nil
+            let remaining = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let text = String(data: remaining, encoding: .utf8), !text.isEmpty {
+                buffer += text
+            }
+            var completed = task
+            completed.response = buffer
+            completed.finishedAt = .now
+            completed.status = (p.terminationStatus == 0) ? .completed : .failed
+            Task { @MainActor in onComplete(completed) }
+        }
+
+        do {
+            try process.run()
+        } catch {
+            var failed = task
+            failed.status = .failed
+            failed.response = "启动失败：\(error.localizedDescription)"
+            failed.finishedAt = .now
+            Task { @MainActor in onComplete(failed) }
+        }
+    }
+
     // onOutput: 流式输出回调（主线程调用）
     // onComplete: 任务结束回调（主线程调用）
     static func run(
@@ -68,7 +184,7 @@ class TaskRunner {
                 let providers = CodingPlanProvider.matchProviders(for: apiKey)
                 if let provider = providers.first {
                     env["ANTHROPIC_BASE_URL"] = provider.baseURL
-                    env["ANTHROPIC_MODEL"] = provider.model
+                    env["ANTHROPIC_MODEL"] = provider.sonnetModel
                     env["ANTHROPIC_AUTH_TOKEN"] = apiKey
                 }
             }
