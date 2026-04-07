@@ -1,36 +1,8 @@
 import SwiftUI
 import AppKit
 
-// ESC 键处理（兼容 macOS 13）
-struct EscapeHandler: NSViewRepresentable {
-    let onEscape: () -> Void
-
-    func makeNSView(context: Context) -> NSView {
-        let view = EscapeView()
-        view.onEscape = onEscape
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        (nsView as? EscapeView)?.onEscape = onEscape
-    }
-
-    class EscapeView: NSView {
-        var onEscape: (() -> Void)?
-        override var acceptsFirstResponder: Bool { true }
-        override func keyDown(with event: NSEvent) {
-            if event.keyCode == 53 { // ESC
-                onEscape?()
-            } else {
-                super.keyDown(with: event)
-            }
-        }
-    }
-}
-
 struct InputView: View {
     @State private var text = ""
-    @FocusState private var focused: Bool
 
     let onSubmit: (String) -> Void
     let onCancel: () -> Void
@@ -42,18 +14,18 @@ struct InputView: View {
                 .font(.title2)
                 .foregroundStyle(Color.accentColor)
 
-            // 输入框
-            TextField("输入任务，按回车发送...", text: $text)
-                .textFieldStyle(.plain)
-                .font(.body)
-                .focused($focused)
-                .onSubmit {
+            // 输入框 - 使用 FocusableTextField 确保 NSPanel 中能获得焦点
+            FocusableTextField(
+                placeholder: "输入任务，按回车发送...",
+                text: $text,
+                onSubmit: {
                     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !trimmed.isEmpty else { return }
                     onSubmit(trimmed)
                     text = ""
-                }
-                .background(EscapeHandler(onEscape: onCancel))
+                },
+                onEscape: onCancel
+            )
 
             // 发送按钮
             Button {
@@ -81,8 +53,76 @@ struct InputView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
         )
-        .onAppear {
-            focused = true
+    }
+}
+
+// 使用 NSTextField 确保在 borderless NSPanel 中能正确获得焦点和处理 ESC
+struct FocusableTextField: NSViewRepresentable {
+    let placeholder: String
+    @Binding var text: String
+    let onSubmit: () -> Void
+    let onEscape: () -> Void
+
+    func makeNSView(context: Context) -> NSTextField {
+        let textField = FocusableNSTextField()
+        textField.placeholderString = placeholder
+        textField.delegate = context.coordinator
+        textField.bezelStyle = .roundedBezel
+        textField.isBezeled = false
+        textField.drawsBackground = false
+        textField.focusRingType = .none
+        textField.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        textField.onSubmit = onSubmit
+        textField.onEscape = onEscape
+        return textField
+    }
+
+    func updateNSView(_ nsView: NSTextField, context: Context) {
+        nsView.stringValue = text
+        (nsView as? FocusableNSTextField)?.onSubmit = onSubmit
+        (nsView as? FocusableNSTextField)?.onEscape = onEscape
+        // 每次更新时尝试获得焦点
+        DispatchQueue.main.async {
+            if let window = nsView.window, window.isKeyWindow {
+                window.makeFirstResponder(nsView)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, NSTextFieldDelegate {
+        let parent: FocusableTextField
+
+        init(_ parent: FocusableTextField) {
+            self.parent = parent
+        }
+
+        func controlTextDidChange(_ obj: Notification) {
+            guard let textField = obj.object as? NSTextField else { return }
+            parent.text = textField.stringValue
+        }
+
+        func controlTextDidEndEditing(_ obj: Notification) {
+            guard let textField = obj.object as? NSTextField else { return }
+            parent.text = textField.stringValue
+        }
+    }
+}
+
+class FocusableNSTextField: NSTextField {
+    var onSubmit: (() -> Void)?
+    var onEscape: (() -> Void)?
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 36 { // Return/Enter
+            onSubmit?()
+        } else if event.keyCode == 53 { // ESC
+            onEscape?()
+        } else {
+            super.keyDown(with: event)
         }
     }
 }

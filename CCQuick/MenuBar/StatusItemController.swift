@@ -142,6 +142,23 @@ class StatusItemController {
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
 
+        // 快速输入入口（备用）
+        let inputItem = NSMenuItem(title: "快速输入…", action: #selector(showInput), keyEquivalent: "")
+        inputItem.target = self
+        menu.addItem(inputItem)
+
+        // 快捷键状态
+        let hotkeyStr = AppSettings.hotkeyDisplayString
+        let hotkeyItem = NSMenuItem(
+            title: "快捷键 \(hotkeyStr)",
+            action: #selector(showSettings),
+            keyEquivalent: ""
+        )
+        hotkeyItem.target = self
+        menu.addItem(hotkeyItem)
+
+        menu.addItem(.separator())
+
         // 正在执行的任务
         let running = taskManager.runningTasks
         if !running.isEmpty {
@@ -195,6 +212,14 @@ class StatusItemController {
         menu.addItem(NSMenuItem(title: "退出 CCQuick", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 
         return menu
+    }
+
+    @objc private func showInput() {
+        InputWindowController.shared.show()
+    }
+
+    @objc private func openAccessibilitySettings() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
     }
 
     @objc private func viewResult(_ sender: NSMenuItem) {

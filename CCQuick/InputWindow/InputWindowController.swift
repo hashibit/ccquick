@@ -1,14 +1,15 @@
 import AppKit
 import SwiftUI
 import ApplicationServices
+import Carbon
 
 class InputWindowController: NSObject {
     static let shared = InputWindowController()
 
-    private var panel: NSPanel?
-    private var globalMonitor: Any?
-    private var localMonitor: Any?
+    private var panel: KeyPanel?
     private var escapeMonitor: Any?
+    private var hotkeyRef: EventHotKeyRef?
+    private var hotkeyHandler: EventHandlerRef?
 
     var onSubmit: ((String) -> Void)?
 
@@ -19,7 +20,7 @@ class InputWindowController: NSObject {
     }
 
     private func setupPanel() {
-        let panel = NSPanel(
+        let panel = KeyPanel(
             contentRect: NSRect(x: 0, y: 0, width: 600, height: 56),
             styleMask: [.borderless],
             backing: .buffered,
@@ -70,47 +71,70 @@ class InputWindowController: NSObject {
         panel.setFrameOrigin(NSPoint(x: x, y: y))
     }
 
-    // MARK: - 全局快捷键 ⌘⇧Space
+    // MARK: - 全局快捷键（使用 Carbon API）
 
     private func registerHotkey() {
-        // 检查辅助功能权限
-        let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: false] as CFDictionary
-        let trusted = AXIsProcessTrustedWithOptions(options)
+        let settings = AppSettings.current
 
-        if !trusted {
-            promptAccessibilityPermission()
-        }
+        // 安装事件处理器
+        var eventType = EventTypeSpec(
+            eventClass: OSType(kEventClassKeyboard),
+            eventKind: OSType(kEventHotKeyPressed)
+        )
 
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if self?.isHotkey(event) == true {
-                Task { @MainActor in self?.toggle() }
-            }
-        }
+        InstallEventHandler(
+            GetEventDispatcherTarget(),
+            { (_, _, _) -> OSStatus in
+                InputWindowController.shared.handleHotkey()
+                return noErr
+            },
+            1,
+            &eventType,
+            nil,
+            &hotkeyHandler
+        )
 
-        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if self?.isHotkey(event) == true {
-                Task { @MainActor in self?.toggle() }
-                return nil
-            }
-            return event
-        }
+        // 注册热键
+        let status = RegisterEventHotKey(
+            settings.hotkeyKeyCode,
+            settings.hotkeyModifiers,
+            EventHotKeyID(signature: OSType(0x43435175), id: 1), // 'CCQu'
+            GetEventDispatcherTarget(),
+            0,
+            &hotkeyRef
+        )
+
+        print("[Hotkey] 注册状态: \(status == noErr ? "✓ 成功" : "✗ 失败 (code=\(status))")")
+        print("[Hotkey] 当前快捷键: \(AppSettings.hotkeyDisplayString)")
     }
 
-    private func isHotkey(_ event: NSEvent) -> Bool {
-        // ⌘⇧Space (keyCode 49)
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        return flags == [.command, .shift] && event.keyCode == 49
+    // 更新快捷键（设置变更时调用）
+    func updateHotkey() {
+        // 先注销旧的
+        if let ref = hotkeyRef {
+            UnregisterEventHotKey(ref)
+            hotkeyRef = nil
+        }
+
+        // 重新注册新的
+        let settings = AppSettings.current
+        let status = RegisterEventHotKey(
+            settings.hotkeyKeyCode,
+            settings.hotkeyModifiers,
+            EventHotKeyID(signature: OSType(0x43435175), id: 1),
+            GetEventDispatcherTarget(),
+            0,
+            &hotkeyRef
+        )
+
+        print("[Hotkey] 更新快捷键: \(status == noErr ? "✓ 成功" : "✗ 失败")")
+        print("[Hotkey] 新快捷键: \(AppSettings.hotkeyDisplayString)")
     }
 
-    private func promptAccessibilityPermission() {
-        let alert = NSAlert()
-        alert.messageText = "需要辅助功能权限"
-        alert.informativeText = "CCQuick 需要辅助功能权限来监听全局快捷键 ⌘⇧Space。\n请前往「系统设置 → 隐私与安全性 → 辅助功能」开启。"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "打开系统设置")
-        alert.addButton(withTitle: "稍后再说")
-        if alert.runModal() == .alertFirstButtonReturn {
-            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+    private func handleHotkey() {
+        print("[Hotkey] 快捷键触发!")
+        Task { @MainActor in
+            self.toggle()
         }
     }
 
@@ -128,6 +152,29 @@ class InputWindowController: NSObject {
         centerPanel()
         panel?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        // 让 textField 成为 first responder
+        DispatchQueue.main.async {
+            if let contentView = self.panel?.contentView {
+                for subview in contentView.subviews {
+                    if let textField = self.findTextField(in: subview) {
+                        self.panel?.makeFirstResponder(textField)
+                        break
+                    }
+                }
+            }
+        }
+    }
+
+    private func findTextField(in view: NSView) -> NSTextField? {
+        if let textField = view as? NSTextField {
+            return textField
+        }
+        for subview in view.subviews {
+            if let found = findTextField(in: subview) {
+                return found
+            }
+        }
+        return nil
     }
 
     func hide() {
@@ -135,8 +182,13 @@ class InputWindowController: NSObject {
     }
 
     deinit {
-        if let m = globalMonitor { NSEvent.removeMonitor(m) }
-        if let m = localMonitor { NSEvent.removeMonitor(m) }
+        if let ref = hotkeyRef { UnregisterEventHotKey(ref) }
+        if let handler = hotkeyHandler { RemoveEventHandler(handler) }
         if let m = escapeMonitor { NSEvent.removeMonitor(m) }
     }
+}
+
+// 自定义 NSPanel 子类，确保 borderless 面板能成为 key window
+class KeyPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
 }

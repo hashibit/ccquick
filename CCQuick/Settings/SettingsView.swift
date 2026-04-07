@@ -1,4 +1,5 @@
 import SwiftUI
+import Carbon
 
 struct SettingsView: View {
     @Bindable private var store = SettingsStore.shared
@@ -9,6 +10,7 @@ struct SettingsView: View {
     @State private var allowMentions = true
     @State private var alwaysReturnToLast = false
     @State private var textSize: Double = 0.5
+    @State private var isRecordingHotkey = false
 
     let accounts = ["API", "Claude Code CLI"]
 
@@ -50,7 +52,17 @@ struct SettingsView: View {
                 // MARK: - 快捷键
                 SettingsSection(title: "快捷键") {
                     VStack(spacing: 0) {
-                        ShortcutRow(title: "打开输入窗口", keys: ["⌘", "", "Space"])
+                        // 主快捷键（可录制）
+                        HotkeyRecordingRow(
+                            title: "打开输入窗口",
+                            currentHotkey: store.hotkeyDisplayString,
+                            isRecording: $isRecordingHotkey,
+                            onRecord: { modifiers, keyCode in
+                                store.hotkeyModifiers = modifiers
+                                store.hotkeyKeyCode = keyCode
+                                store.save()
+                            }
+                        )
                         Divider()
                         ShortcutRow(title: "打开历史记录", keys: ["⌘", "H"])
                         Divider()
@@ -84,7 +96,7 @@ struct SettingsView: View {
             }
             .padding(24)
         }
-        .frame(width: 550, height: 500)
+        .frame(width: 550, height: 520)
         .onAppear {
             tempApiBase = store.apiBase
             tempApiKey = store.apiKey
@@ -220,6 +232,116 @@ struct ToggleRow: View {
                 .labelsHidden()
         }
         .padding(.vertical, 8)
+    }
+}
+
+// MARK: - 快捷键录制行
+
+struct HotkeyRecordingRow: NSViewRepresentable {
+    let title: String
+    let currentHotkey: String
+    @Binding var isRecording: Bool
+    let onRecord: (UInt32, UInt32) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let container = NSView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+
+        let titleLabel = NSTextField(labelWithString: title)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(titleLabel)
+
+        let button = NSButton()
+        button.title = currentHotkey
+        button.bezelStyle = .rounded
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.buttonClicked)
+        context.coordinator.button = button
+        container.addSubview(button)
+
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            button.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            button.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            button.widthAnchor.constraint(equalToConstant: 120),
+            container.heightAnchor.constraint(equalToConstant: 32)
+        ])
+
+        return container
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        if let button = context.coordinator.button {
+            button.title = isRecording ? "按下新快捷键..." : currentHotkey
+            button.highlight(isRecording)
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject {
+        var parent: HotkeyRecordingRow
+        var button: NSButton?
+        private var monitor: Any?
+
+        init(_ parent: HotkeyRecordingRow) {
+            self.parent = parent
+        }
+
+        @objc func buttonClicked() {
+            if parent.isRecording {
+                stopRecording()
+            } else {
+                startRecording()
+            }
+        }
+
+        private func startRecording() {
+            parent.isRecording = true
+            button?.title = "按下新快捷键..."
+
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self = self else { return event }
+
+                // ESC 取消录制
+                if event.keyCode == 53 {
+                    self.stopRecording()
+                    return nil
+                }
+
+                // 获取修饰键
+                let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                var modifiers: UInt32 = 0
+                if flags.contains(.command) { modifiers |= UInt32(cmdKey) }
+                if flags.contains(.shift) { modifiers |= UInt32(shiftKey) }
+                if flags.contains(.option) { modifiers |= UInt32(optionKey) }
+                if flags.contains(.control) { modifiers |= UInt32(controlKey) }
+
+                // 必须至少有一个修饰键
+                guard modifiers != 0 else {
+                    NSSound.beep()
+                    return nil
+                }
+
+                let keyCode = UInt32(event.keyCode)
+                self.parent.onRecord(modifiers, keyCode)
+                self.stopRecording()
+                return nil
+            }
+        }
+
+        private func stopRecording() {
+            parent.isRecording = false
+            if let m = monitor {
+                NSEvent.removeMonitor(m)
+                monitor = nil
+            }
+            button?.title = parent.currentHotkey
+        }
     }
 }
 
