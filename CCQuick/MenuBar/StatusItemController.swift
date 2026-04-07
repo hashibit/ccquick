@@ -27,6 +27,22 @@ class LogWindowController: NSObject {
         window?.center()
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+
+        // 显示 Dock 图标
+        NSApp.setActivationPolicy(.regular)
+    }
+
+    private func checkHideDockIcon() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            let hasVisibleWindows = NSApp.windows.contains { window in
+                window.isVisible &&
+                window.styleMask.contains(.titled) &&
+                window !== self.window
+            }
+            if !hasVisibleWindows {
+                NSApp.setActivationPolicy(.accessory)
+            }
+        }
     }
 }
 
@@ -34,6 +50,10 @@ extension LogWindowController: NSWindowDelegate {
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         window?.orderOut(nil)
         return false
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        checkHideDockIcon()
     }
 }
 

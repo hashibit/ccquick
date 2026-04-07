@@ -17,7 +17,7 @@ class SettingsWindowController: NSObject {
             let hostingView = NSHostingView(rootView: view)
 
             let newWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 550, height: 520),
+                contentRect: NSRect(x: 0, y: 0, width: 550, height: 480),
                 styleMask: [.titled, .closable, .resizable],
                 backing: .buffered,
                 defer: false
@@ -33,19 +33,23 @@ class SettingsWindowController: NSObject {
         window?.center()
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-
-        // 添加 ESC 键监听
         setupEscapeMonitor()
+
+        // 显示 Dock 图标
+        NSApp.setActivationPolicy(.regular)
     }
 
     func hide() {
         window?.orderOut(nil)
         removeEscapeMonitor()
+
+        // 如果没有其他窗口，隐藏 Dock 图标
+        checkHideDockIcon()
     }
 
     private func setupEscapeMonitor() {
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 53, // ESC
+            if event.keyCode == 53,
                let window = event.window,
                window === self?.window {
                 self?.hide()
@@ -62,6 +66,18 @@ class SettingsWindowController: NSObject {
         }
     }
 
+    private func checkHideDockIcon() {
+        // 检查是否还有可见窗口（排除菜单栏面板）
+        let hasVisibleWindows = NSApp.windows.contains { window in
+            window.isVisible &&
+            window.styleMask.contains(.titled) &&
+            window !== self.window
+        }
+        if !hasVisibleWindows {
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+
     deinit {
         removeEscapeMonitor()
     }
@@ -74,7 +90,6 @@ extension SettingsWindowController: NSWindowDelegate {
     }
 
     func windowDidResignKey(_ notification: Notification) {
-        // 窗口失去焦点时移除 ESC 监听
         removeEscapeMonitor()
     }
 }

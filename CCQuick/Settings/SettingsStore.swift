@@ -81,13 +81,27 @@ struct CodingPlanProvider: Codable {
     let baseURL: String
     let model: String
     let keyPrefixes: [String]
+    let apiType: APIType
+    let authType: AuthType
+
+    enum APIType: String, Codable {
+        case anthropic  // Anthropic 兼容 API (路径: /v1/messages)
+        case openai     // OpenAI 兼容 API (路径: /chat/completions)
+    }
+
+    enum AuthType: String, Codable {
+        case xApiKey    // Anthropic 原生: x-api-key header
+        case bearer     // OpenAI 风格: Authorization: Bearer
+    }
 
     static let providers: [CodingPlanProvider] = [
-        CodingPlanProvider(name: "Kimi", baseURL: "https://api.moonshot.cn/v1", model: "moonshot-v1-8k", keyPrefixes: ["sk-"]),
-        CodingPlanProvider(name: "通义千问", baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-turbo", keyPrefixes: ["sk-"]),
-        CodingPlanProvider(name: "DeepSeek", baseURL: "https://api.deepseek.com", model: "deepseek-chat", keyPrefixes: ["sk-"]),
-        CodingPlanProvider(name: "智谱", baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-4", keyPrefixes: ["."]),
-        CodingPlanProvider(name: "百炼", baseURL: "https://coding.dashscope.aliyuncs.com/apps/anthropic", model: "kimi-k2.5", keyPrefixes: ["sk-sp-"]),
+        // Anthropic 兼容 API，Bearer 认证
+        CodingPlanProvider(name: "百炼", baseURL: "https://coding.dashscope.aliyuncs.com/apps/anthropic", model: "qwen3.5-plus", keyPrefixes: ["sk-sp-"], apiType: .anthropic, authType: .bearer),
+        // OpenAI 兼容 API
+        CodingPlanProvider(name: "Kimi", baseURL: "https://api.moonshot.cn/v1", model: "moonshot-v1-8k", keyPrefixes: ["sk-"], apiType: .openai, authType: .bearer),
+        CodingPlanProvider(name: "通义千问", baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-turbo", keyPrefixes: ["sk-"], apiType: .openai, authType: .bearer),
+        CodingPlanProvider(name: "DeepSeek", baseURL: "https://api.deepseek.com", model: "deepseek-chat", keyPrefixes: ["sk-"], apiType: .openai, authType: .bearer),
+        CodingPlanProvider(name: "智谱", baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-4-flash", keyPrefixes: ["."], apiType: .openai, authType: .bearer),
     ]
 
     static func matchProviders(for apiKey: String) -> [CodingPlanProvider] {
@@ -120,17 +134,21 @@ class AvailabilityChecker: ObservableObject {
         let providerName: String?
     }
 
+    struct ProviderCheckResult {
+        let provider: CodingPlanProvider
+        let success: Bool
+        let error: String?
+        let duration: TimeInterval
+    }
+
     func checkClaudeSubscription() {
         isChecking = true
         result = nil
 
-        Task.detached(priority: .userInitiated) { [weak self] in
-            let checkResult = await self?.runClaudeCheck()
-            await MainActor.run {
-                self?.isChecking = false
-                if let r = checkResult { self?.result = r }
-            }
-        }
+        // Claude 订阅不需要检测，直接显示成功
+        logInfo("使用 Claude CLI 默认配置", category: "Check")
+        isChecking = false
+        result = CheckResult(success: true, message: "使用 Claude CLI 配置", providerName: "Claude CLI")
     }
 
     func checkCodingPlan(apiKey: String) {
@@ -146,20 +164,8 @@ class AvailabilityChecker: ObservableObject {
         }
     }
 
-    private nonisolated func runClaudeCheck() async -> CheckResult {
-        logInfo("开始检测 Claude 订阅...", category: "Check")
-
-        guard let path = findClaudePath() else {
-            logError("未找到 Claude CLI", category: "Check")
-            return CheckResult(success: false, message: "未找到 Claude CLI", providerName: nil)
-        }
-
-        logDebug("Claude 路径: \(path)", category: "Check")
-        return await runProcess(path: path, env: nil, providerName: "Claude CLI")
-    }
-
     private nonisolated func runCodingPlanCheck(apiKey: String) async -> CheckResult {
-        logInfo("开始检测 CodingPlan...", category: "Check")
+        logInfo("开始并行检测 CodingPlan...", category: "Check")
 
         let trimmedKey = apiKey.trimmingCharacters(in: .whitespaces)
         guard !trimmedKey.isEmpty else {
@@ -168,79 +174,97 @@ class AvailabilityChecker: ObservableObject {
         }
 
         let providers = CodingPlanProvider.matchProviders(for: trimmedKey)
-        logInfo("匹配到 \(providers.count) 个厂商", category: "Check")
+        logInfo("并行测试 \(providers.count) 个厂商", category: "Check")
 
-        for provider in providers {
-            logDebug("尝试厂商: \(provider.name)", category: "Check")
-            let env: [String: String] = [
-                "ANTHROPIC_BASE_URL": provider.baseURL,
-                "ANTHROPIC_MODEL": provider.model,
-                "ANTHROPIC_AUTH_TOKEN": trimmedKey
-            ]
-            let result = await runProcess(path: findClaudePath(), env: env, providerName: provider.name)
-            if result.success {
-                return result
-            }
-        }
-
-        logError("所有厂商检测失败", category: "Check")
-        return CheckResult(success: false, message: "所有厂商均失败", providerName: nil)
-    }
-
-    private nonisolated func runProcess(path: String?, env: [String: String]?, providerName: String) async -> CheckResult {
-        guard let path = path else {
-            return CheckResult(success: false, message: "未找到 Claude CLI", providerName: nil)
-        }
-
-        return await withCheckedContinuation { continuation in
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: path)
-            process.arguments = ["--dangerously-skip-permissions", "-p", "Say ok"]
-
-            if let env = env {
-                var fullEnv = ProcessInfo.processInfo.environment
-                for (k, v) in env { fullEnv[k] = v }
-                process.environment = fullEnv
-            }
-
-            let outputPipe = Pipe()
-            let errorPipe = Pipe()
-            process.standardOutput = outputPipe
-            process.standardError = errorPipe
-
-            process.terminationHandler = { _ in
-                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                let error = String(data: errorData, encoding: .utf8) ?? ""
-
-                if process.terminationStatus == 0 {
-                    logInfo("\(providerName) 检测成功", category: "Check")
-                    continuation.resume(returning: CheckResult(success: true, message: "可用", providerName: providerName))
-                } else {
-                    logWarning("\(providerName) 失败: \(error.prefix(100))", category: "Check")
-                    continuation.resume(returning: CheckResult(success: false, message: "\(providerName): \(error.prefix(50))", providerName: providerName))
+        // 并行测试所有厂商
+        let results = await withTaskGroup(of: ProviderCheckResult.self) { group in
+            for provider in providers {
+                group.addTask {
+                    await self.testProviderAPI(provider: provider, apiKey: trimmedKey)
                 }
             }
 
-            do {
-                logDebug("启动进程: \(path)", category: "Check")
-                try process.run()
-            } catch {
-                logError("启动失败: \(error)", category: "Check")
-                continuation.resume(returning: CheckResult(success: false, message: "启动失败", providerName: nil))
+            var allResults: [ProviderCheckResult] = []
+            for await result in group {
+                allResults.append(result)
+                if result.success {
+                    // 找到成功的，取消其他请求
+                    group.cancelAll()
+                    break
+                }
             }
+            return allResults
         }
+
+        // 找第一个成功的结果
+        for result in results where result.success {
+            logInfo("检测成功: \(result.provider.name), 耗时: \(String(format: "%.2f", result.duration))s", category: "Check")
+            return CheckResult(success: true, message: "可用 (\(String(format: "%.2f", result.duration))s)", providerName: result.provider.name)
+        }
+
+        // 全部失败
+        let failedProviders = results.filter { !$0.success }.map { "\($0.provider.name): \($0.error ?? "未知错误")" }.joined(separator: "; ")
+        logError("所有厂商检测失败", category: "Check")
+        return CheckResult(success: false, message: failedProviders, providerName: nil)
     }
 
-    private nonisolated func findClaudePath() -> String? {
-        let candidates = [
-            "/usr/local/bin/claude",
-            "/opt/homebrew/bin/claude",
-            "\(FileManager.default.homeDirectoryForCurrentUser.path)/.local/bin/claude",
-        ]
-        for path in candidates where FileManager.default.fileExists(atPath: path) {
-            return path
+    private nonisolated func testProviderAPI(provider: CodingPlanProvider, apiKey: String) async -> ProviderCheckResult {
+        let startTime = Date()
+
+        let url: URL
+        var request: URLRequest
+
+        // 根据 apiType 决定路径
+        switch provider.apiType {
+        case .anthropic:
+            url = URL(string: "\(provider.baseURL)/v1/messages")!
+        case .openai:
+            url = URL(string: "\(provider.baseURL)/chat/completions")!
         }
-        return nil
+
+        request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // 根据 authType 决定认证方式
+        switch provider.authType {
+        case .xApiKey:
+            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+            request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        case .bearer:
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
+
+        // 请求体格式相同
+        let body: [String: Any] = [
+            "model": provider.model,
+            "max_tokens": 10,
+            "messages": [["role": "user", "content": "Hi"]]
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        request.timeoutInterval = 15
+
+        logDebug("测试 \(provider.name) (\(provider.apiType.rawValue))", category: "Check")
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            let duration = Date().timeIntervalSince(startTime)
+
+            if let httpResponse = response as? HTTPURLResponse {
+                if httpResponse.statusCode == 200 {
+                    logInfo("\(provider.name) 成功 (\(String(format: "%.2f", duration))s)", category: "Check")
+                    return ProviderCheckResult(provider: provider, success: true, error: nil, duration: duration)
+                } else {
+                    logWarning("\(provider.name) HTTP \(httpResponse.statusCode)", category: "Check")
+                    return ProviderCheckResult(provider: provider, success: false, error: "HTTP \(httpResponse.statusCode)", duration: duration)
+                }
+            }
+            return ProviderCheckResult(provider: provider, success: false, error: "无响应", duration: Date().timeIntervalSince(startTime))
+        } catch {
+            let duration = Date().timeIntervalSince(startTime)
+            logWarning("\(provider.name) \(error.localizedDescription)", category: "Check")
+            return ProviderCheckResult(provider: provider, success: false, error: error.localizedDescription, duration: duration)
+        }
     }
 }
 
