@@ -23,7 +23,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 初始化输入窗口（含全局快捷键）
         inputWindowController = InputWindowController()
         inputWindowController?.onSubmit = { [weak self] prompt in
+            logInfo("收到提交请求: \(prompt.prefix(50))...", category: "App")
             self?.statusItemController?.taskManager.submit(prompt: prompt)
+            logDebug("任务已提交到 TaskManager", category: "App")
         }
 
         // 监听 TaskManager 变化，更新菜单栏图标

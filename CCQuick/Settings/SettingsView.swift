@@ -67,12 +67,10 @@ struct SettingsView: View {
                             Spacer()
                                 .frame(width: 100)
                             Button {
-                                Task {
-                                    if store.executionAccount == .claudeSubscription {
-                                        await checker.checkClaudeSubscription()
-                                    } else {
-                                        await checker.checkCodingPlan(apiKey: store.codingPlanApiKey)
-                                    }
+                                if store.executionAccount == .claudeSubscription {
+                                    checker.checkClaudeSubscription()
+                                } else {
+                                    checker.checkCodingPlan(apiKey: store.codingPlanApiKey)
                                 }
                             } label: {
                                 if checker.isChecking {

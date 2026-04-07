@@ -120,144 +120,110 @@ class AvailabilityChecker: ObservableObject {
         let providerName: String?
     }
 
-    func checkClaudeSubscription() async -> CheckResult {
+    func checkClaudeSubscription() {
         isChecking = true
-        defer { isChecking = false }
+        result = nil
 
-        logInfo("开始检测 Claude 订阅...", category: "Check")
-
-        // 查找 claude 路径
-        let claudePath = findClaudePath()
-        logDebug("Claude 路径: \(claudePath ?? "未找到")", category: "Check")
-
-        guard let path = claudePath else {
-            let result = CheckResult(success: false, message: "未找到 Claude CLI，请先安装", providerName: nil)
-            self.result = result
-            logError("未找到 Claude CLI", category: "Check")
-            return result
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: path)
-        process.arguments = ["--dangerously-skip-permissions", "-p", "Say ok"]
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            logDebug("启动进程: \(path)", category: "Check")
-            try process.run()
-            process.waitUntilExit()
-
-            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: outputData, encoding: .utf8) ?? ""
-            let error = String(data: errorData, encoding: .utf8) ?? ""
-
-            logDebug("Exit code: \(process.terminationStatus)", category: "Check")
-            logDebug("Output: \(output.prefix(200))", category: "Check")
-            if !error.isEmpty { logWarning("Stderr: \(error.prefix(200))", category: "Check") }
-
-            if process.terminationStatus == 0 {
-                let result = CheckResult(success: true, message: "可用", providerName: "Claude CLI")
-                self.result = result
-                logInfo("Claude CLI 检测成功", category: "Check")
-                return result
-            } else {
-                let result = CheckResult(success: false, message: "失败: \(error.prefix(100))", providerName: nil)
-                self.result = result
-                logError("Claude CLI 检测失败: \(error.prefix(100))", category: "Check")
-                return result
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let checkResult = await self?.runClaudeCheck()
+            await MainActor.run {
+                self?.isChecking = false
+                if let r = checkResult { self?.result = r }
             }
-        } catch {
-            logError("启动失败: \(error)", category: "Check")
-            let result = CheckResult(success: false, message: "启动失败: \(error.localizedDescription)", providerName: nil)
-            self.result = result
-            return result
         }
     }
 
-    func checkCodingPlan(apiKey: String) async -> CheckResult {
+    func checkCodingPlan(apiKey: String) {
         isChecking = true
-        defer { isChecking = false }
+        result = nil
 
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let checkResult = await self?.runCodingPlanCheck(apiKey: apiKey)
+            await MainActor.run {
+                self?.isChecking = false
+                if let r = checkResult { self?.result = r }
+            }
+        }
+    }
+
+    private nonisolated func runClaudeCheck() async -> CheckResult {
+        logInfo("开始检测 Claude 订阅...", category: "Check")
+
+        guard let path = findClaudePath() else {
+            logError("未找到 Claude CLI", category: "Check")
+            return CheckResult(success: false, message: "未找到 Claude CLI", providerName: nil)
+        }
+
+        logDebug("Claude 路径: \(path)", category: "Check")
+        return await runProcess(path: path, env: nil, providerName: "Claude CLI")
+    }
+
+    private nonisolated func runCodingPlanCheck(apiKey: String) async -> CheckResult {
         logInfo("开始检测 CodingPlan...", category: "Check")
 
         let trimmedKey = apiKey.trimmingCharacters(in: .whitespaces)
         guard !trimmedKey.isEmpty else {
-            let result = CheckResult(success: false, message: "请输入 API Key", providerName: nil)
-            self.result = result
             logWarning("API Key 为空", category: "Check")
-            return result
+            return CheckResult(success: false, message: "请输入 API Key", providerName: nil)
         }
 
         let providers = CodingPlanProvider.matchProviders(for: trimmedKey)
-        logInfo("匹配到 \(providers.count) 个厂商: \(providers.map { $0.name }.joined(separator: ", "))", category: "Check")
+        logInfo("匹配到 \(providers.count) 个厂商", category: "Check")
 
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("ccquick-check")
-        try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-
-        var lastError = ""
         for provider in providers {
             logDebug("尝试厂商: \(provider.name)", category: "Check")
-            let result = await checkProvider(provider: provider, apiKey: trimmedKey, tempDir: tempDir)
+            let env: [String: String] = [
+                "ANTHROPIC_BASE_URL": provider.baseURL,
+                "ANTHROPIC_MODEL": provider.model,
+                "ANTHROPIC_AUTH_TOKEN": trimmedKey
+            ]
+            let result = await runProcess(path: findClaudePath(), env: env, providerName: provider.name)
             if result.success {
-                self.result = result
-                logInfo("检测成功: \(provider.name)", category: "Check")
                 return result
             }
-            lastError = result.message
         }
 
-        let result = CheckResult(success: false, message: "全部失败: \(lastError)", providerName: nil)
-        self.result = result
         logError("所有厂商检测失败", category: "Check")
-        return result
+        return CheckResult(success: false, message: "所有厂商均失败", providerName: nil)
     }
 
-    private func checkProvider(provider: CodingPlanProvider, apiKey: String, tempDir: URL) async -> CheckResult {
+    private nonisolated func runProcess(path: String?, env: [String: String]?, providerName: String) async -> CheckResult {
+        guard let path = path else {
+            return CheckResult(success: false, message: "未找到 Claude CLI", providerName: nil)
+        }
+
         return await withCheckedContinuation { continuation in
-            let claudePath = findClaudePath()
-
-            guard let path = claudePath else {
-                logError("未找到 Claude CLI", category: "Check")
-                continuation.resume(returning: CheckResult(success: false, message: "未找到 Claude CLI", providerName: nil))
-                return
-            }
-
             let process = Process()
-            process.currentDirectoryURL = tempDir
-
-            var env = ProcessInfo.processInfo.environment
-            env["ANTHROPIC_BASE_URL"] = provider.baseURL
-            env["ANTHROPIC_MODEL"] = provider.model
-            env["ANTHROPIC_AUTH_TOKEN"] = apiKey
-            process.environment = env
-
             process.executableURL = URL(fileURLWithPath: path)
             process.arguments = ["--dangerously-skip-permissions", "-p", "Say ok"]
+
+            if let env = env {
+                var fullEnv = ProcessInfo.processInfo.environment
+                for (k, v) in env { fullEnv[k] = v }
+                process.environment = fullEnv
+            }
 
             let outputPipe = Pipe()
             let errorPipe = Pipe()
             process.standardOutput = outputPipe
             process.standardError = errorPipe
 
-            do {
-                try process.run()
-                process.waitUntilExit()
-
+            process.terminationHandler = { _ in
                 let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
                 let error = String(data: errorData, encoding: .utf8) ?? ""
 
                 if process.terminationStatus == 0 {
-                    logInfo("\(provider.name) 检测成功", category: "Check")
-                    continuation.resume(returning: CheckResult(success: true, message: "可用", providerName: provider.name))
+                    logInfo("\(providerName) 检测成功", category: "Check")
+                    continuation.resume(returning: CheckResult(success: true, message: "可用", providerName: providerName))
                 } else {
-                    logWarning("\(provider.name) 失败: \(error.prefix(100))", category: "Check")
-                    continuation.resume(returning: CheckResult(success: false, message: "\(provider.name): \(error.prefix(50))", providerName: provider.name))
+                    logWarning("\(providerName) 失败: \(error.prefix(100))", category: "Check")
+                    continuation.resume(returning: CheckResult(success: false, message: "\(providerName): \(error.prefix(50))", providerName: providerName))
                 }
+            }
+
+            do {
+                logDebug("启动进程: \(path)", category: "Check")
+                try process.run()
             } catch {
                 logError("启动失败: \(error)", category: "Check")
                 continuation.resume(returning: CheckResult(success: false, message: "启动失败", providerName: nil))
@@ -270,30 +236,10 @@ class AvailabilityChecker: ObservableObject {
             "/usr/local/bin/claude",
             "/opt/homebrew/bin/claude",
             "\(FileManager.default.homeDirectoryForCurrentUser.path)/.local/bin/claude",
-            "\(FileManager.default.homeDirectoryForCurrentUser.path)/.npm-global/bin/claude",
         ]
-
-        for path in candidates {
-            if FileManager.default.fileExists(atPath: path) {
-                return path
-            }
-        }
-
-        // 尝试用 which 查找
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        process.arguments = ["claude"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        try? process.run()
-        process.waitUntilExit()
-
-        if let data = try? pipe.fileHandleForReading.readToEnd(),
-           let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !path.isEmpty {
+        for path in candidates where FileManager.default.fileExists(atPath: path) {
             return path
         }
-
         return nil
     }
 }

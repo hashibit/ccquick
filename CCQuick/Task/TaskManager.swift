@@ -22,7 +22,12 @@ class TaskManager {
 
     func submit(prompt: String) {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty else {
+            logWarning("提交的 prompt 为空", category: "Task")
+            return
+        }
+
+        logInfo("提交任务: \(trimmed.prefix(50))...", category: "Task")
 
         let id = TaskStore.shared.makeTaskId(prompt: trimmed)
         let workDir = TaskStore.shared.baseDir.appendingPathComponent(id).path
@@ -39,16 +44,21 @@ class TaskManager {
         )
 
         runningTasks.append(task)
+        logDebug("任务添加到 runningTasks, count=\(runningTasks.count)", category: "Task")
+
         do {
             try TaskStore.shared.save(task)
+            logDebug("任务已保存: \(id)", category: "Task")
         } catch {
-            print("Failed to save task: \(error)")
+            logError("保存任务失败: \(error)", category: "Task")
         }
 
-        TaskRunner.run(task: task, onOutput: { _ in
-            // 可用于实时更新输出（暂未使用）
+        logInfo("启动 TaskRunner...", category: "Task")
+        TaskRunner.run(task: task, onOutput: { output in
+            logDebug("任务输出: \(output.prefix(100))", category: "Task")
         }, onComplete: { [weak self] completed in
             guard let self = self else { return }
+            logInfo("任务完成: \(completed.id), status=\(completed.status.rawValue)", category: "Task")
             self.runningTasks.removeAll { $0.id == completed.id }
             if completed.status == .completed {
                 self.unviewedTasks.append(completed)
@@ -56,7 +66,7 @@ class TaskManager {
             do {
                 try TaskStore.shared.save(completed)
             } catch {
-                print("Failed to save completed task: \(error)")
+                logError("保存完成任务失败: \(error)", category: "Task")
             }
             self.onTaskCompleted?(completed)
         })

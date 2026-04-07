@@ -37,9 +37,12 @@ class InputWindowController: NSObject {
         panel.hidesOnDeactivate = false
 
         let inputView = InputView { [weak self] prompt in
+            logInfo("InputView onSubmit 被调用: \(prompt.prefix(50))", category: "Input")
             self?.hide()
             self?.onSubmit?(prompt)
+            logDebug("onSubmit 回调已执行", category: "Input")
         } onCancel: { [weak self] in
+            logInfo("InputView onCancel 被调用", category: "Input")
             self?.hide()
         }
 

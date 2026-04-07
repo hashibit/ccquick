@@ -126,9 +126,12 @@ class FocusableNSTextField: NSTextField {
     var onEscape: (() -> Void)?
 
     override func keyDown(with event: NSEvent) {
+        logDebug("keyDown: keyCode=\(event.keyCode)", category: "Input")
         if event.keyCode == 36 { // Return/Enter
+            logInfo("Enter 按下，触发 onSubmit", category: "Input")
             onSubmit?()
         } else if event.keyCode == 53 { // ESC
+            logInfo("ESC 按下", category: "Input")
             onEscape?()
         } else {
             super.keyDown(with: event)
@@ -139,6 +142,7 @@ class FocusableNSTextField: NSTextField {
     override func becomeFirstResponder() -> Bool {
         let result = super.becomeFirstResponder()
         if result {
+            logDebug("TextField 获得焦点", category: "Input")
             // 将光标移到末尾
             if let editor = currentEditor() {
                 editor.selectedRange = NSRange(location: stringValue.count, length: 0)
