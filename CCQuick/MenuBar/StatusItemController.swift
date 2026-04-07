@@ -199,7 +199,7 @@ class StatusItemController {
         }
 
         // 历史记录
-        let historyItem = NSMenuItem(title: "历史记录…", action: #selector(showHistory), keyEquivalent: "h")
+        let historyItem = NSMenuItem(title: "历史记录…", action: #selector(showHistory), keyEquivalent: "")
         historyItem.target = self
         menu.addItem(historyItem)
 
@@ -209,7 +209,7 @@ class StatusItemController {
         menu.addItem(settingsItem)
 
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "退出 CCQuick", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "退出 CCQuick", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
 
         return menu
     }
