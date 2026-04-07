@@ -3,30 +3,25 @@ import Carbon
 
 struct SettingsView: View {
     @Bindable private var store = SettingsStore.shared
-    @State private var tempApiBase: String = ""
-    @State private var tempApiKey: String = ""
-    @State private var tempModel: String = ""
-    @State private var selectedAccount = "API"
-    @State private var allowMentions = true
-    @State private var alwaysReturnToLast = false
-    @State private var textSize: Double = 0.5
+    @StateObject private var checker = AvailabilityChecker()
     @State private var isRecordingHotkey = false
-
-    let accounts = ["API", "Claude Code CLI"]
+    @State private var allowMentions = true
+    @State private var textSize: Double = 0.5
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                // MARK: - 账户配置
-                SettingsSection(title: "账户配置") {
+                // MARK: - 执行引擎
+                SettingsSection(title: "执行引擎") {
                     VStack(alignment: .leading, spacing: 16) {
+                        // 执行账户选择
                         HStack {
-                            Text("默认账户")
-                                .frame(width: 120, alignment: .trailing)
+                            Text("执行账户")
+                                .frame(width: 100, alignment: .trailing)
                             Spacer()
-                            Picker("", selection: $selectedAccount) {
-                                ForEach(accounts, id: \.self) { account in
-                                    Text(account).tag(account)
+                            Picker("", selection: $store.executionAccount) {
+                                ForEach(ExecutionAccount.allCases, id: \.self) { account in
+                                    Text(account.displayName).tag(account)
                                 }
                             }
                             .pickerStyle(.menu)
@@ -34,16 +29,78 @@ struct SettingsView: View {
                             .frame(width: 200)
                         }
 
-                        if selectedAccount == "API" {
-                            SettingRow(title: "API Base URL", value: $tempApiBase, placeholder: "https://api.anthropic.com")
-                            SettingRow(title: "API Key", value: $tempApiKey, isSecure: true, placeholder: "sk-ant-...")
-                            SettingRow(title: "Model", value: $tempModel, placeholder: "claude-sonnet-4-20250514")
+                        // CodingPlan 订阅时显示 API Key 输入框
+                        if store.executionAccount == .codingPlan {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text("API Key")
+                                        .frame(width: 100, alignment: .trailing)
+                                    Spacer()
+                                    SecureField("输入 API Key", text: $store.codingPlanApiKey)
+                                        .textFieldStyle(.roundedBorder)
+                                        .frame(width: 300)
+                                        .onChange(of: store.codingPlanApiKey) { _, _ in
+                                            store.save()
+                                        }
+                                }
+
+                                // 提示信息
+                                Text("支持：Kimi、通义千问、DeepSeek、智谱、百炼等")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.leading, 100)
+                            }
                         } else {
+                            // Claude 订阅说明
                             HStack(spacing: 8) {
-                                Image(systemName: "checkmark.circle.fill")
+                                Image(systemName: "info.circle")
                                     .foregroundColor(.secondary)
-                                Text("使用 Claude Code CLI 默认配置")
+                                Text("使用已登录的 Claude CLI 配置")
                                     .foregroundColor(.secondary)
+                                    .font(.system(size: 12))
+                            }
+                            .padding(.leading, 100)
+                        }
+
+                        // 检测可用性按钮
+                        HStack {
+                            Spacer()
+                                .frame(width: 100)
+                            Button {
+                                Task {
+                                    if store.executionAccount == .claudeSubscription {
+                                        await checker.checkClaudeSubscription()
+                                    } else {
+                                        await checker.checkCodingPlan(apiKey: store.codingPlanApiKey)
+                                    }
+                                }
+                            } label: {
+                                if checker.isChecking {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                        .frame(width: 16, height: 16)
+                                    Text("检测中...")
+                                } else {
+                                    Text("检测可用性")
+                                }
+                            }
+                            .disabled(checker.isChecking || (store.executionAccount == .codingPlan && store.codingPlanApiKey.isEmpty))
+
+                            // 检测结果
+                            if let result = checker.result {
+                                HStack(spacing: 4) {
+                                    Image(systemName: result.success ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                        .foregroundColor(result.success ? .green : .red)
+                                    if let provider = result.providerName, result.success {
+                                        Text(provider)
+                                            .foregroundColor(.secondary)
+                                    } else if !result.success {
+                                        Text(result.message)
+                                            .foregroundColor(.red)
+                                            .font(.system(size: 11))
+                                            .lineLimit(2)
+                                    }
+                                }
                             }
                         }
                     }
@@ -52,7 +109,6 @@ struct SettingsView: View {
                 // MARK: - 快捷键
                 SettingsSection(title: "快捷键") {
                     VStack(spacing: 0) {
-                        // 主快捷键（可录制）
                         HotkeyRecordingRow(
                             title: "打开输入窗口",
                             currentHotkey: store.hotkeyDisplayString,
@@ -64,9 +120,9 @@ struct SettingsView: View {
                             }
                         )
                         Divider()
-                        ShortcutRow(title: "打开历史记录", keys: ["⌘", "H"])
+                        ShortcutRow(title: "打开历史记录", keys: ["菜单"])
                         Divider()
-                        ShortcutRow(title: "打开设置", keys: ["⌘", ","])
+                        ShortcutRow(title: "打开设置", keys: ["菜单"])
                     }
                 }
 
@@ -74,46 +130,12 @@ struct SettingsView: View {
                 SettingsSection(title: "行为") {
                     VStack(spacing: 0) {
                         ToggleRow(title: "启用通知", isOn: $allowMentions)
-                        Divider()
-                        ToggleRow(title: "任务完成后自动标记为已查看", isOn: $alwaysReturnToLast)
                     }
-                }
-
-                // MARK: - 外观
-                SettingsSection(title: "外观") {
-                    HStack {
-                        Text("默认文本大小")
-                            .frame(width: 120)
-                        Spacer()
-                        Slider(value: $textSize, in: 0...1)
-                            .frame(width: 200)
-                        Text("中")
-                            .foregroundColor(.secondary)
-                            .frame(width: 30)
-                    }
-                    .padding(.vertical, 8)
                 }
             }
             .padding(24)
         }
-        .frame(width: 550, height: 520)
-        .onAppear {
-            tempApiBase = store.apiBase
-            tempApiKey = store.apiKey
-            tempModel = store.model
-        }
-        .onChange(of: tempApiBase) { _, newValue in
-            store.apiBase = newValue
-            store.save()
-        }
-        .onChange(of: tempApiKey) { _, newValue in
-            store.apiKey = newValue
-            store.save()
-        }
-        .onChange(of: tempModel) { _, newValue in
-            store.model = newValue
-            store.save()
-        }
+        .frame(width: 550, height: 480)
     }
 }
 
@@ -157,30 +179,6 @@ struct SectionCard<Content: View>: View {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color(NSColor.controlBackgroundColor))
             )
-    }
-}
-
-// MARK: - 设置行
-
-struct SettingRow: View {
-    let title: String
-    @Binding var value: String
-    var isSecure: Bool = false
-    let placeholder: String
-
-    var body: some View {
-        HStack {
-            Text(title)
-                .frame(width: 120, alignment: .trailing)
-            Spacer()
-            if isSecure {
-                SecureField(placeholder, text: $value)
-                    .frame(width: 250)
-            } else {
-                TextField(placeholder, text: $value)
-                    .frame(width: 250)
-            }
-        }
     }
 }
 
@@ -307,13 +305,11 @@ struct HotkeyRecordingRow: NSViewRepresentable {
             monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self = self else { return event }
 
-                // ESC 取消录制
                 if event.keyCode == 53 {
                     self.stopRecording()
                     return nil
                 }
 
-                // 获取修饰键
                 let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
                 var modifiers: UInt32 = 0
                 if flags.contains(.command) { modifiers |= UInt32(cmdKey) }
@@ -321,7 +317,6 @@ struct HotkeyRecordingRow: NSViewRepresentable {
                 if flags.contains(.option) { modifiers |= UInt32(optionKey) }
                 if flags.contains(.control) { modifiers |= UInt32(controlKey) }
 
-                // 必须至少有一个修饰键
                 guard modifiers != 0 else {
                     NSSound.beep()
                     return nil

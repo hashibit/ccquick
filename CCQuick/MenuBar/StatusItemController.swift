@@ -1,4 +1,103 @@
 import AppKit
+import SwiftUI
+
+// MARK: - 日志窗口
+
+class LogWindowController: NSObject {
+    static let shared = LogWindowController()
+    private var window: NSWindow?
+
+    func show() {
+        if window == nil {
+            let view = LogView()
+            let hostingView = NSHostingView(rootView: view)
+            let newWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 800, height: 500),
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            newWindow.title = "日志"
+            newWindow.center()
+            newWindow.minSize = NSSize(width: 500, height: 300)
+            newWindow.contentView = hostingView
+            newWindow.delegate = self
+            window = newWindow
+        }
+        window?.center()
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+}
+
+extension LogWindowController: NSWindowDelegate {
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        window?.orderOut(nil)
+        return false
+    }
+}
+
+struct LogView: View {
+    @ObservedObject var logManager = LogManager.shared
+    @State private var autoScroll = true
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Toggle("自动滚动", isOn: $autoScroll)
+                Spacer()
+                Button("清空") { logManager.clear() }
+                Button("复制全部") {
+                    let text = logManager.logs.map { "[\($0.formattedTime)][\($0.level.rawValue)][\($0.category)] \($0.message)" }.joined(separator: "\n")
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                }
+            }
+            .padding(8)
+            .background(Color(NSColor.controlBackgroundColor))
+
+            Divider()
+
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 2) {
+                        ForEach(logManager.logs) { entry in
+                            HStack(alignment: .top, spacing: 4) {
+                                Text(entry.formattedTime)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 70, alignment: .leading)
+                                Text(entry.level.rawValue)
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundColor(entry.level.color)
+                                    .frame(width: 45, alignment: .leading)
+                                Text("[\(entry.category)]")
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundColor(.blue)
+                                    .frame(width: 80, alignment: .leading)
+                                Text(entry.message)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(.primary)
+                                    .textSelection(.enabled)
+                                Spacer()
+                            }
+                            .id(entry.id)
+                        }
+                    }
+                    .padding(4)
+                }
+                .onChange(of: logManager.logs.count) { _, _ in
+                    if autoScroll, let last = logManager.logs.last {
+                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                    }
+                }
+            }
+        }
+        .background(Color(NSColor.textBackgroundColor))
+    }
+}
+
+// MARK: - StatusItemController
 
 @MainActor
 class StatusItemController {
@@ -208,6 +307,11 @@ class StatusItemController {
         settingsItem.target = self
         menu.addItem(settingsItem)
 
+        // 日志
+        let logItem = NSMenuItem(title: "日志…", action: #selector(showLog), keyEquivalent: "")
+        logItem.target = self
+        menu.addItem(logItem)
+
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "退出 CCQuick", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
 
@@ -239,5 +343,9 @@ class StatusItemController {
 
     @objc private func showSettings() {
         SettingsWindowController.shared.show()
+    }
+
+    @objc private func showLog() {
+        LogWindowController.shared.show()
     }
 }

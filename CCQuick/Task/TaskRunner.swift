@@ -58,17 +58,22 @@ class TaskRunner {
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(env["PATH"] ?? "")"
 
-        // 注入用户配置的 API 设置
+        // 根据执行账户类型设置环境变量
         let settings = AppSettings.current
-        if !settings.apiBase.isEmpty {
-            env["ANTHROPIC_BASE_URL"] = settings.apiBase
+        if settings.executionAccount == .codingPlan {
+            // CodingPlan 订阅：使用配置的厂商
+            let apiKey = settings.codingPlanApiKey.trimmingCharacters(in: .whitespaces)
+            if !apiKey.isEmpty {
+                // 根据 API key 匹配厂商，使用第一个匹配的
+                let providers = CodingPlanProvider.matchProviders(for: apiKey)
+                if let provider = providers.first {
+                    env["ANTHROPIC_BASE_URL"] = provider.baseURL
+                    env["ANTHROPIC_MODEL"] = provider.model
+                    env["ANTHROPIC_AUTH_TOKEN"] = apiKey
+                }
+            }
         }
-        if !settings.apiKey.isEmpty {
-            env["ANTHROPIC_AUTH_TOKEN"] = settings.apiKey
-        }
-        if !settings.model.isEmpty {
-            env["ANTHROPIC_MODEL"] = settings.model
-        }
+        // 默认 Claude 订阅：不设置额外环境变量，使用 CLI 默认配置
 
         process.environment = env
 
