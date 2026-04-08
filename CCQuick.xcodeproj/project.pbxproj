@@ -16,6 +16,9 @@
 		74B297D9C9042905A391DB66 /* TaskRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4580BB3290766584AAB5B5F6 /* TaskRunner.swift */; };
 		7A3146DB633404AAD5F37AED /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F8217322D181ED222D7BFF6 /* TaskStore.swift */; };
 		98556A8DDB915A6CC832452B /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2A3C9F212DF4CF21A56CFD2 /* HistoryView.swift */; };
+		AB0E28AC5C7003220EDDE392 /* TaskOutlineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B45ECCA651FC31BDBE01C42 /* TaskOutlineView.swift */; };
+		APICLIENT001 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = APICLIENT002 /* APIClient.swift */; };
+		ASSETS001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ASSETS002 /* Assets.xcassets */; };
 		BB3CBAE8B4098B377279EB7B /* StatusItemController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091A9EBDD912CD23E9F5443C /* StatusItemController.swift */; };
 		BFB56FB996981E38A1B111BD /* ResultWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBBC7491CFCBBC7CC6ED3E42 /* ResultWindowController.swift */; };
 		CAF59D65E732BB38581B6B5A /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F24BDFE35F0656A3E58CD6 /* SettingsWindowController.swift */; };
@@ -23,8 +26,6 @@
 		DB3EC0D87C6F837FED396F61 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4152192DE27FE2E8811724D8 /* SettingsView.swift */; };
 		E903393B65AA74B2FE6572CE /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE51EB9748E93FCAEDC1B3E3 /* SettingsStore.swift */; };
 		EE9DD3BC771A54F819B66305 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD140A39950702D107F95492 /* AppDelegate.swift */; };
-		APICLIENT001 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = APICLIENT002 /* APIClient.swift */; };
-		ASSETS001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ASSETS002 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,12 +36,14 @@
 		55CE77851D65558E04CA7190 /* InputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputView.swift; sourceTree = "<group>"; };
 		674701A8CDC56EC5E20242D9 /* CCQuick.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CCQuick.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		67685A0433F1C88ED5808D0F /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
+		6B45ECCA651FC31BDBE01C42 /* TaskOutlineView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TaskOutlineView.swift; sourceTree = "<group>"; };
 		6F8217322D181ED222D7BFF6 /* TaskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStore.swift; sourceTree = "<group>"; };
 		7F38E55CD395D3FB37D9C481 /* CCQuickApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CCQuickApp.swift; sourceTree = "<group>"; };
 		810E98EFD67B7132109D0AA2 /* InputWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputWindowController.swift; sourceTree = "<group>"; };
 		89F00944B5FD9E17B96D58A0 /* HistoryWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWindowController.swift; sourceTree = "<group>"; };
 		A2A3C9F212DF4CF21A56CFD2 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		APICLIENT002 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		ASSETS002 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B9311F5FF47E49DF29E7A25D /* TaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskManager.swift; sourceTree = "<group>"; };
 		BE51EB9748E93FCAEDC1B3E3 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		C1F24BDFE35F0656A3E58CD6 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
@@ -48,7 +51,6 @@
 		CD140A39950702D107F95492 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D9F8326F7723CCD7421AEA28 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		F89B269A46F2AE2F9B94E356 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		ASSETS002 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,17 +62,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
-
-/* Begin PBXResourcesBuildPhase section */
-		RESOURCES001 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				ASSETS001 /* Assets.xcassets in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXGroup section */
 		02581FC041F69F77502FD55B /* Notifications */ = {
@@ -119,6 +110,7 @@
 			children = (
 				A2A3C9F212DF4CF21A56CFD2 /* HistoryView.swift */,
 				89F00944B5FD9E17B96D58A0 /* HistoryWindowController.swift */,
+				6B45ECCA651FC31BDBE01C42 /* TaskOutlineView.swift */,
 			);
 			path = History;
 			sourceTree = "<group>";
@@ -256,6 +248,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		RESOURCES001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ASSETS001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		6F05A03CDDC72AD6FDD95C38 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -278,6 +281,7 @@
 				2F73F928E44E34CC77A7F681 /* TaskManager.swift in Sources */,
 				74B297D9C9042905A391DB66 /* TaskRunner.swift in Sources */,
 				7A3146DB633404AAD5F37AED /* TaskStore.swift in Sources */,
+				AB0E28AC5C7003220EDDE392 /* TaskOutlineView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

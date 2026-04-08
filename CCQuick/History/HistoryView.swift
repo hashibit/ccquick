@@ -123,35 +123,17 @@ struct HistoryView: View {
         .searchable(text: $searchText, placement: .sidebar, prompt: "搜索")
     }
 
-    // MARK: - 任务列表
+    // MARK: - 任务列表（NSOutlineView 桥接，支持单击选择 + 双击打开）
 
     private var taskList: some View {
-        List(selection: $selectedTaskId) {
-            ForEach(filteredTasks) { task in
-                TaskRow(task: task)
-                    .tag(task.id)
-                    .onTapGesture(count: 2) {
-                        openTaskDetailWindow(taskId: task.id)
-                    }
+        TaskOutlineViewWrapper(
+            tasks: filteredTasks,
+            selectedTaskId: $selectedTaskId,
+            onDoubleClick: { taskId in
+                openTaskDetailWindow(taskId: taskId)
             }
-            .onDelete { indexSet in
-                deleteTasks(at: indexSet)
-            }
-        }
-        .listStyle(.inset)
-        .alternatingRowBackgrounds(.enabled)
-        .toolbar {
-            ToolbarItemGroup(placement: .automatic) {
-                Spacer()
-                Button("删除", systemImage: "trash") {
-                    if let selectedId = selectedTaskId {
-                        deleteTask(id: selectedId)
-                    }
-                }
-                .disabled(selectedTaskId == nil)
-                .help("删除选中任务")
-            }
-        }
+        )
+        .navigationTitle("")
     }
 
     /// 双击打开任务详情独立窗口
