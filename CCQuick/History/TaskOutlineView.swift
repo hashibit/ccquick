@@ -28,11 +28,8 @@ final class TaskOutlineView: NSOutlineView {
         column.resizingMask = .userResizingMask
         addTableColumn(column)
 
-        // source list 样式
-        style = .sourceList
-
         // 行高
-        rowHeight = 56
+        rowHeight = 54
         intercellSpacing = NSSize(width: 0, height: 0)
 
         // 不显示列头
@@ -43,6 +40,9 @@ final class TaskOutlineView: NSOutlineView {
 
         // 单选
         allowsMultipleSelection = false
+
+        // 选中高亮样式
+        selectionHighlightStyle = .regular
     }
 
     @objc private func handleDoubleClick(_ sender: Any) {
@@ -77,7 +77,9 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
         scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
-        scrollView.drawsBackground = false
+        // 使用标准的控制背景色
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = NSColor.controlBackgroundColor
 
         // 保存 outline 引用到 coordinator
         context.coordinator.outlineView = outline
@@ -130,7 +132,6 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
         // MARK: - DataSource
 
         func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
-            // 根节点返回任务列表中的项
             if item == nil {
                 return tasks[index]
             }
@@ -142,7 +143,6 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
         }
 
         func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
-            // 根节点返回任务数量
             if item == nil {
                 return tasks.count
             }
@@ -155,6 +155,13 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
 
         // MARK: - Delegate
 
+        func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? {
+            let rowView = TaskRowView()
+            let row = outlineView.row(forItem: item)
+            rowView.setRowNumber(row)
+            return rowView
+        }
+
         func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
             guard let task = item as? CCTask else { return nil }
 
@@ -165,7 +172,7 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
                 cell = NSTableCellView()
                 cell?.identifier = identifier
 
-                // 左侧状态条
+                // 左侧状态条 - 使用更柔和的颜色
                 let statusBar = NSView()
                 statusBar.identifier = NSUserInterfaceItemIdentifier("StatusBar")
                 statusBar.wantsLayer = true
@@ -186,52 +193,56 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
                 previewField.drawsBackground = false
                 previewField.lineBreakMode = .byTruncatingTail
 
-                // 日期
-                let dateField = NSTextField()
-                dateField.identifier = NSUserInterfaceItemIdentifier("Date")
-                dateField.isEditable = false
-                dateField.isBordered = false
-                dateField.drawsBackground = false
+                // 底部信息行
+                let infoField = NSTextField()
+                infoField.identifier = NSUserInterfaceItemIdentifier("Info")
+                infoField.isEditable = false
+                infoField.isBordered = false
+                infoField.drawsBackground = false
 
                 cell?.addSubview(statusBar)
                 cell?.addSubview(titleField)
                 cell?.addSubview(previewField)
-                cell?.addSubview(dateField)
+                cell?.addSubview(infoField)
 
                 statusBar.translatesAutoresizingMaskIntoConstraints = false
                 titleField.translatesAutoresizingMaskIntoConstraints = false
                 previewField.translatesAutoresizingMaskIntoConstraints = false
-                dateField.translatesAutoresizingMaskIntoConstraints = false
+                infoField.translatesAutoresizingMaskIntoConstraints = false
 
                 NSLayoutConstraint.activate([
+                    // 状态条：左侧，垂直居中
                     statusBar.leadingAnchor.constraint(equalTo: cell!.leadingAnchor, constant: 4),
-                    statusBar.topAnchor.constraint(equalTo: cell!.topAnchor, constant: 6),
-                    statusBar.bottomAnchor.constraint(equalTo: cell!.bottomAnchor, constant: -6),
-                    statusBar.widthAnchor.constraint(equalToConstant: 4),
+                    statusBar.centerYAnchor.constraint(equalTo: cell!.centerYAnchor),
+                    statusBar.widthAnchor.constraint(equalToConstant: 3),
+                    statusBar.heightAnchor.constraint(equalToConstant: 36),
 
-                    titleField.leadingAnchor.constraint(equalTo: statusBar.trailingAnchor, constant: 12),
-                    titleField.topAnchor.constraint(equalTo: cell!.topAnchor, constant: 6),
-                    titleField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -8),
+                    // 标题：状态条右侧
+                    titleField.leadingAnchor.constraint(equalTo: statusBar.trailingAnchor, constant: 8),
+                    titleField.topAnchor.constraint(equalTo: cell!.topAnchor, constant: 8),
+                    titleField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -12),
 
+                    // 预览：标题下方
                     previewField.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
                     previewField.topAnchor.constraint(equalTo: titleField.bottomAnchor, constant: 2),
-                    previewField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -8),
+                    previewField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -12),
 
-                    dateField.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
-                    dateField.topAnchor.constraint(equalTo: previewField.bottomAnchor, constant: 2),
-                    dateField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -8),
+                    // 信息行：预览下方
+                    infoField.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
+                    infoField.topAnchor.constraint(equalTo: previewField.bottomAnchor, constant: 2),
+                    infoField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -12),
                 ])
             }
 
             // 更新内容
             if let statusBar = cell?.viewWithIdentifier("StatusBar") as? NSView {
                 statusBar.layer?.backgroundColor = statusColor(for: task).cgColor
-                statusBar.layer?.cornerRadius = 2
+                statusBar.layer?.cornerRadius = 1.5
             }
 
             if let titleField = cell?.viewWithIdentifier("Title") as? NSTextField {
                 titleField.stringValue = task.shortPrompt
-                titleField.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+                titleField.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
                 titleField.textColor = NSColor.labelColor
             }
 
@@ -242,16 +253,20 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
                     previewField.textColor = NSColor.systemBlue
                 } else {
                     let preview = String(task.response.prefix(60)).replacingOccurrences(of: "\n", with: " ")
-                    previewField.stringValue = preview.isEmpty ? "无响应内容" : preview
+                    previewField.stringValue = preview.isEmpty ? "无内容" : preview
                     previewField.font = NSFont.systemFont(ofSize: 11)
                     previewField.textColor = NSColor.secondaryLabelColor
                 }
             }
 
-            if let dateField = cell?.viewWithIdentifier("Date") as? NSTextField {
-                dateField.stringValue = task.startedAt.formatted(date: .abbreviated, time: .shortened)
-                dateField.font = NSFont.systemFont(ofSize: 10)
-                dateField.textColor = NSColor.tertiaryLabelColor
+            if let infoField = cell?.viewWithIdentifier("Info") as? NSTextField {
+                var infoText = task.startedAt.formatted(date: .abbreviated, time: .shortened)
+                if task.status == .completed {
+                    infoText += " · \(task.elapsedString)"
+                }
+                infoField.stringValue = infoText
+                infoField.font = NSFont.systemFont(ofSize: 10)
+                infoField.textColor = NSColor.tertiaryLabelColor
             }
 
             return cell
@@ -270,11 +285,39 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
 
         private func statusColor(for task: CCTask) -> NSColor {
             switch task.status {
-            case .completed: return NSColor.systemGreen
-            case .failed: return NSColor.systemRed
-            case .running: return NSColor.systemBlue
+            case .completed: return NSColor.systemGreen.withAlphaComponent(0.85)
+            case .failed: return NSColor.systemRed.withAlphaComponent(0.85)
+            case .running: return NSColor.systemBlue.withAlphaComponent(0.85)
             }
         }
+    }
+}
+
+// MARK: - 自定义行视图
+
+class TaskRowView: NSTableRowView {
+    private var rowNumber: Int = 0
+
+    func setRowNumber(_ row: Int) {
+        rowNumber = row
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        // 绘制交替行背景（奇数行有浅色背景）
+        if !isSelected && rowNumber % 2 == 1 {
+            NSColor.controlBackgroundColor.withAlphaComponent(0.5).setFill()
+            bounds.fill()
+        }
+
+        // 绘制选中背景
+        if isSelected {
+            NSColor.selectedContentBackgroundColor.setFill()
+            let selectionRect = NSRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
+            let path = NSBezierPath(roundedRect: selectionRect, xRadius: 4, yRadius: 4)
+            path.fill()
+        }
+
+        super.draw(dirtyRect)
     }
 }
 
