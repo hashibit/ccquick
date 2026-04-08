@@ -18,7 +18,7 @@ struct CCTask: Identifiable, Codable, Hashable {
 
     var shortPrompt: String {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.count > 40 ? String(trimmed.prefix(40)) + "…" : trimmed
+        return trimmed.count > 80 ? String(trimmed.prefix(80)) + "…" : trimmed
     }
 
     var elapsedSeconds: Int {

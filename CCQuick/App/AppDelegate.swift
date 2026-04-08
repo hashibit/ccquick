@@ -15,9 +15,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         UNUserNotificationCenter.current().delegate = NotificationService.shared
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
-        // 注册通知响应：点击通知 → 历史窗口选中该任务
+        // 注册通知响应：点击通知 → 独立任务详情窗口
         NotificationService.shared.onTaskNotificationClicked = { taskId in
-            HistoryWindowController.shared.show(selectingTaskId: taskId)
+            let controller = TaskDetailWindowController(taskId: taskId)
+            controller.show()
         }
 
         // 初始化菜单栏图标

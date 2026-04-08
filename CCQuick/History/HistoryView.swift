@@ -130,6 +130,9 @@ struct HistoryView: View {
             ForEach(filteredTasks) { task in
                 TaskRow(task: task)
                     .tag(task.id)
+                    .onTapGesture(count: 2) {
+                        openTaskDetailWindow(taskId: task.id)
+                    }
             }
             .onDelete { indexSet in
                 deleteTasks(at: indexSet)
@@ -149,6 +152,12 @@ struct HistoryView: View {
                 .help("删除选中任务")
             }
         }
+    }
+
+    /// 双击打开任务详情独立窗口
+    private func openTaskDetailWindow(taskId: String) {
+        let controller = TaskDetailWindowController(taskId: taskId)
+        controller.show()
     }
 
     private func deleteTasks(at offsets: IndexSet) {

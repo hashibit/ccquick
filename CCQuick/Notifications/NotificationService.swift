@@ -10,8 +10,9 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
 
     func notify(task: CCTask) {
         let content = UNMutableNotificationContent()
-        content.title = task.status == .completed ? "✓ 任务完成" : "✗ 任务失败"
-        content.body = task.shortPrompt
+        // 问题作为 title，答案作为 body，不设置 subtitle
+        content.title = task.shortPrompt
+        content.body = shortResponse(task.response)
         content.sound = .default
         content.userInfo = ["taskId": task.id]
 
@@ -21,6 +22,12 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
             trigger: nil
         )
         UNUserNotificationCenter.current().add(request)
+    }
+
+    /// 截取答案的前 120 字符作为通知摘要
+    private func shortResponse(_ response: String) -> String {
+        let trimmed = response.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.count > 120 ? String(trimmed.prefix(120)) + "…" : trimmed
     }
 
     // 用户点击通知时触发

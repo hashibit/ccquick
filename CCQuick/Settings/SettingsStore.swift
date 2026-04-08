@@ -27,6 +27,7 @@ class LogManager: ObservableObject {
     enum LogLevel: String {
         case debug = "DEBUG"
         case info = "INFO"
+        case tool = "TOOL"
         case warning = "WARN"
         case error = "ERROR"
 
@@ -34,6 +35,7 @@ class LogManager: ObservableObject {
             switch self {
             case .debug: return .gray
             case .info: return .primary
+            case .tool: return .purple
             case .warning: return .orange
             case .error: return .red
             }
@@ -44,6 +46,7 @@ class LogManager: ObservableObject {
 
     func debug(_ message: String, category: String = "App") { addLog(level: .debug, category: category, message: message) }
     func info(_ message: String, category: String = "App") { addLog(level: .info, category: category, message: message) }
+    func tool(_ message: String, category: String = "AI") { addLog(level: .tool, category: category, message: message) }
     func warning(_ message: String, category: String = "App") { addLog(level: .warning, category: category, message: message) }
     func error(_ message: String, category: String = "App") { addLog(level: .error, category: category, message: message) }
 
@@ -59,6 +62,7 @@ class LogManager: ObservableObject {
 
 func logDebug(_ message: String, category: String = "App") { Task { @MainActor in LogManager.shared.debug(message, category: category) } }
 func logInfo(_ message: String, category: String = "App") { Task { @MainActor in LogManager.shared.info(message, category: category) } }
+func logTool(_ message: String, category: String = "AI") { Task { @MainActor in LogManager.shared.tool(message, category: category) } }
 func logWarning(_ message: String, category: String = "App") { Task { @MainActor in LogManager.shared.warning(message, category: category) } }
 func logError(_ message: String, category: String = "App") { Task { @MainActor in LogManager.shared.error(message, category: category) } }
 

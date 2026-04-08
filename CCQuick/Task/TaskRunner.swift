@@ -7,6 +7,92 @@ enum TaskRunnerError: Error {
 
 class TaskRunner {
 
+    // MARK: - 工具调用解析
+
+    /// 从流式输出中解析并记录工具调用
+    private static func parseAndLogToolCalls(_ text: String, taskId: String) {
+        // Claude CLI 输出格式中工具调用可能以多种形式出现
+        // 1. "---" 分隔后跟随工具信息
+        // 2. "Tool use:" 或 "Using tool:" 标记
+        // 3. JSON 格式的工具调用块
+
+        // 检测常见工具调用标记
+        let toolPatterns = [
+            "Tool use:",
+            "Using tool:",
+            "⏺ ",  // Claude CLI 的工具标记
+            "◯ ",   // 另一种标记
+        ]
+
+        for pattern in toolPatterns {
+            if text.contains(pattern) {
+                // 提取工具行
+                let lines = text.components(separatedBy: "\n")
+                for line in lines where line.contains(pattern) {
+                    let toolInfo = line.replacingOccurrences(of: pattern, with: "").trimmingCharacters(in: .whitespaces)
+                    if !toolInfo.isEmpty {
+                        logTool("▸ \(toolInfo)", category: taskId)
+                    }
+                }
+            }
+        }
+
+        // 检测特定工具名称（Read, Write, Bash, Glob, Grep 等）
+        let toolNames = ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "WebFetch", "WebSearch"]
+        for tool in toolNames {
+            if text.contains("\(tool)(") || text.contains("tool: \(tool)") {
+                // 尝试提取参数摘要
+                if let range = text.range(of: "\(tool)(") {
+                    let start = range.upperBound
+                    let rest = text[start...]
+                    if let endRange = rest.range(of: ")") {
+                        let params = String(rest[..<endRange.lowerBound])
+                        // 截取关键参数
+                        let summary = extractParamSummary(tool: tool, params: params)
+                        logTool("▸ \(tool) \(summary)", category: taskId)
+                    } else {
+                        logTool("▸ \(tool)", category: taskId)
+                    }
+                }
+            }
+        }
+    }
+
+    /// 提取参数摘要（如文件路径、命令等关键信息）
+    private static func extractParamSummary(tool: String, params: String) -> String {
+        switch tool {
+        case "Read", "Write", "Edit", "Glob", "Grep":
+            // 提取文件路径
+            if let pathMatch = params.components(separatedBy: "file_path").first {
+                let pathPart = pathMatch.components(separatedBy: "=").last?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: "\"", with: "")
+                if let path = pathPart, !path.isEmpty {
+                    // 只显示文件名或相对路径
+                    return path.components(separatedBy: "/").last ?? path
+                }
+            }
+            // 尝试直接匹配路径格式
+            let pathPatterns = params.components(separatedBy: "\"").filter { $0.contains("/") }
+            if let path = pathPatterns.first {
+                return path.components(separatedBy: "/").last ?? path
+            }
+        case "Bash":
+            // 提取命令
+            if let cmdMatch = params.components(separatedBy: "command").first {
+                let cmdPart = cmdMatch.components(separatedBy: "=").last?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: "\"", with: "")
+                if let cmd = cmdPart, !cmd.isEmpty {
+                    return cmd.prefix(50).description
+                }
+            }
+        default:
+            break
+        }
+        return ""
+    }
+
     static func findClaudePath() -> String? {
         let candidates = [
             "/usr/local/bin/claude",
@@ -119,6 +205,8 @@ class TaskRunner {
             let data = handle.availableData
             guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
             buffer += text
+            // 解析并记录工具调用
+            parseAndLogToolCalls(text, taskId: task.id)
             Task { @MainActor in onOutput(text) }
         }
 
@@ -203,6 +291,8 @@ class TaskRunner {
             let data = handle.availableData
             guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
             buffer += text
+            // 解析并记录工具调用
+            parseAndLogToolCalls(text, taskId: task.id)
             Task { @MainActor in onOutput(text) }
         }
 

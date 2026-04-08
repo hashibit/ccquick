@@ -78,17 +78,49 @@ struct LogView: View {
 
             Divider()
 
-//            ScrollViewReader { proxy in
-//                SelectableTextView(logManager: logManager)
-//                    .onChange(of: logManager.logs.count) { _, _ in
-//                        if autoScroll, let last = logManager.logs.last {
-//                            proxy.scrollTo(last.id, anchor: .bottom)
-//                        }
-//                    }
-//            }
-
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 2) {
+                        ForEach(logManager.logs) { entry in
+                            HStack(alignment: .top, spacing: 4) {
+                                Text(entry.formattedTime)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(.tertiary)
+                                Text("[\(entry.level.rawValue)]")
+                                    .font(.system(.caption, design: .monospaced))
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(levelColor(entry.level))
+                                Text("[\(entry.category)]")
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                                Text(entry.message)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .textSelection(.enabled)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .id(entry.id)
+                        }
+                    }
+                }
+                .onChange(of: logManager.logs.count) {
+                    if autoScroll, let last = logManager.logs.last {
+                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                    }
+                }
+            }
         }
         .background(Color(NSColor.textBackgroundColor))
+    }
+
+    private func levelColor(_ level: LogManager.LogLevel) -> Color {
+        switch level {
+        case .debug: return .secondary
+        case .info: return .blue
+        case .tool: return .purple
+        case .warning: return .orange
+        case .error: return .red
+        }
     }
 }
 
@@ -331,7 +363,9 @@ class StatusItemController {
     func showResult(for taskId: String) {
         taskManager.markViewed(taskId: taskId)
         updateIcon()
-        HistoryWindowController.shared.show(selectingTaskId: taskId)
+        // 直接打开独立任务详情窗口
+        let controller = TaskDetailWindowController(taskId: taskId)
+        controller.show()
     }
 
     @objc private func showHistory() {
