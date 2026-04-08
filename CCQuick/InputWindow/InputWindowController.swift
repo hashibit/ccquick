@@ -10,6 +10,7 @@ class InputWindowController: NSObject {
     private var escapeMonitor: Any?
     private var hotkeyRef: EventHotKeyRef?
     private var hotkeyHandler: EventHandlerRef?
+    private var previousApp: NSRunningApplication?
 
     var onSubmit: ((String) -> Void)?
 
@@ -152,6 +153,9 @@ class InputWindowController: NSObject {
     }
 
     func show() {
+        // 保存之前的活动应用
+        previousApp = NSWorkspace.shared.frontmostApplication
+
         centerPanel()
         panel?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -185,6 +189,10 @@ class InputWindowController: NSObject {
         // 先让面板放弃第一响应者状态
         panel?.makeFirstResponder(nil)
         panel?.orderOut(nil)
+
+        // 恢复之前应用的焦点
+        previousApp?.activate(options: [])
+        previousApp = nil
 
         // 如果没有其他可见窗口，隐藏 Dock 图标
         DispatchQueue.main.async {
