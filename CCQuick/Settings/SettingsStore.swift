@@ -370,7 +370,7 @@ struct AppSettings: Codable {
     var executionAccount: ExecutionAccount = .claudeSubscription
     var codingPlanApiKey: String = ""
     var hotkeyModifiers: UInt32 = UInt32(cmdKey | shiftKey)
-    var hotkeyKeyCode: UInt32 = 36 // Return/Enter
+    var hotkeyKeyCode: UInt32 = 49 // Space
     var appearance: AppAppearance = .system
 
     private static let fileURL: URL = FileManager.default.homeDirectoryForCurrentUser

@@ -193,7 +193,7 @@ class StatusItemController {
         } else if badgeCount > 0 {
             imageName = "TrayIconCloud"
         } else {
-            imageName = "TrayIconLanded"
+            imageName = "TrayIconDeparture"
         }
 
         let image = NSImage(named: imageName)
