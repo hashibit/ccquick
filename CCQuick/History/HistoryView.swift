@@ -685,10 +685,9 @@ struct TaskToolbarContent: ToolbarContent {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(task.response, forType: .string)
                     } label: {
-                        Label("复制", systemImage: "doc.on.doc")
+                        Image(systemName: "doc.on.doc")
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .help("复制回复内容")
                 }
 
                 // 打开目录按钮
@@ -696,10 +695,9 @@ struct TaskToolbarContent: ToolbarContent {
                     let workDirURL = URL(fileURLWithPath: task.workDir)
                     NSWorkspace.shared.open(workDirURL)
                 } label: {
-                    Label("目录", systemImage: "folder")
+                    Image(systemName: "folder")
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .help("打开工作目录")
             }
         }
     }

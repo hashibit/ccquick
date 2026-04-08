@@ -242,19 +242,19 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
 
             if let titleField = cell?.viewWithIdentifier("Title") as? NSTextField {
                 titleField.stringValue = task.shortPrompt
-                titleField.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+                titleField.font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .medium)
                 titleField.textColor = NSColor.labelColor
             }
 
             if let previewField = cell?.viewWithIdentifier("Preview") as? NSTextField {
                 if task.status == .running {
                     previewField.stringValue = "运行中..."
-                    previewField.font = NSFont.systemFont(ofSize: 11)
+                    previewField.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
                     previewField.textColor = NSColor.systemBlue
                 } else {
                     let preview = String(task.response.prefix(60)).replacingOccurrences(of: "\n", with: " ")
                     previewField.stringValue = preview.isEmpty ? "无内容" : preview
-                    previewField.font = NSFont.systemFont(ofSize: 11)
+                    previewField.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
                     previewField.textColor = NSColor.secondaryLabelColor
                 }
             }
@@ -265,7 +265,7 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
                     infoText += " · \(task.elapsedString)"
                 }
                 infoField.stringValue = infoText
-                infoField.font = NSFont.systemFont(ofSize: 10)
+                infoField.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize - 1)
                 infoField.textColor = NSColor.tertiaryLabelColor
             }
 
