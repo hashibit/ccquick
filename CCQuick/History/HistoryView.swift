@@ -59,12 +59,15 @@ struct HistoryView: View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             // 左侧分组侧边栏
             groupSidebar
+                .navigationTitle("")
         } content: {
             // 中间任务列表
             taskList
+                .navigationTitle("")
         } detail: {
             // 右侧详情
             detailView
+                .navigationTitle("")
                 .background(Color(NSColor.textBackgroundColor))
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
@@ -524,4 +527,8 @@ struct TaskDetailView: View {
             )
         }
     }
+}
+
+#Preview {
+    HistoryView()
 }

@@ -78,14 +78,15 @@ struct LogView: View {
 
             Divider()
 
-            ScrollViewReader { proxy in
-                SelectableTextView(logManager: logManager)
-                    .onChange(of: logManager.logs.count) { _, _ in
-                        if autoScroll, let last = logManager.logs.last {
-                            proxy.scrollTo(last.id, anchor: .bottom)
-                        }
-                    }
-            }
+//            ScrollViewReader { proxy in
+//                SelectableTextView(logManager: logManager)
+//                    .onChange(of: logManager.logs.count) { _, _ in
+//                        if autoScroll, let last = logManager.logs.last {
+//                            proxy.scrollTo(last.id, anchor: .bottom)
+//                        }
+//                    }
+//            }
+
         }
         .background(Color(NSColor.textBackgroundColor))
     }
