@@ -2,6 +2,7 @@ import SwiftUI
 import MarkdownUI
 
 extension Notification.Name {
+    static let openHistoryWindow = Notification.Name("openHistoryWindow")
     static let selectHistoryTask = Notification.Name("selectHistoryTask")
     static let deleteSelectedHistoryTask = Notification.Name("deleteSelectedHistoryTask")
 }
@@ -87,9 +88,17 @@ struct HistoryView: View {
                 try? await Task.sleep(for: .milliseconds(100))
                 selectedTaskId = taskId
                 if columnVisibility != .all {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        columnVisibility = .all
-                    }
+                    withAnimation(.easeInOut(duration: 0.3)) { columnVisibility = .all }
+                }
+            }
+        }
+        .onDisappear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                let hasVisibleWindows = NSApp.windows.contains {
+                    $0.isVisible && $0.styleMask.contains(.titled)
+                }
+                if !hasVisibleWindows {
+                    NSApp.setActivationPolicy(.accessory)
                 }
             }
         }

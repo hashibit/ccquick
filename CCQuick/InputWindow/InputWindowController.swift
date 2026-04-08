@@ -22,7 +22,7 @@ class InputWindowController: NSObject {
 
     private func setupPanel() {
         let panel = KeyPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 56),
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 96),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
