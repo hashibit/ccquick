@@ -130,10 +130,29 @@ struct SettingsView: View {
                         ToggleRow(title: "启用通知", isOn: $allowMentions)
                     }
                 }
+
+                // MARK: - 外观
+                SettingsSection(title: "外观") {
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text("主题")
+                            Spacer()
+                            Picker("", selection: $store.appearance) {
+                                ForEach(AppAppearance.allCases, id: \.self) { appearance in
+                                    Text(appearance.displayName).tag(appearance)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            .frame(width: 120)
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
             }
             .padding(24)
         }
-        .frame(width: 550, height: 480)
+        .frame(width: 550, height: 550)
     }
 }
 

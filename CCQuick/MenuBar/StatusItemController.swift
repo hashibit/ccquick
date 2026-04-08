@@ -169,10 +169,11 @@ class StatusItemController {
                 symbolName = "bolt.fill"
             }
 
-            let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
+            // 放大图标以匹配其他菜单栏应用
+            let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
             if let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
                 .withSymbolConfiguration(config) {
-                symbol.draw(in: NSRect(x: 2, y: 2, width: 14, height: 14))
+                symbol.draw(in: NSRect(x: 0, y: 0, width: 18, height: 18))
             }
 
             // Badge 数字

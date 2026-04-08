@@ -75,6 +75,29 @@ enum ExecutionAccount: String, Codable, CaseIterable {
     }
 }
 
+// MARK: - 外观主题
+enum AppAppearance: String, Codable, CaseIterable {
+    case system = "system"
+    case light = "light"
+    case dark = "dark"
+
+    var displayName: String {
+        switch self {
+        case .system: return "跟随系统"
+        case .light: return "浅色"
+        case .dark: return "深色"
+        }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+}
+
 // CodingPlan 厂商配置
 struct CodingPlanProvider: Codable {
     let name: String
@@ -344,6 +367,7 @@ struct AppSettings: Codable {
     var codingPlanApiKey: String = ""
     var hotkeyModifiers: UInt32 = UInt32(cmdKey | shiftKey)
     var hotkeyKeyCode: UInt32 = 36 // Return/Enter
+    var appearance: AppAppearance = .system
 
     private static let fileURL: URL = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent(".ccquick")
@@ -447,6 +471,7 @@ class SettingsStore {
     var codingPlanApiKey: String
     var hotkeyModifiers: UInt32
     var hotkeyKeyCode: UInt32
+    var appearance: AppAppearance
 
     static let shared = SettingsStore()
 
@@ -456,6 +481,7 @@ class SettingsStore {
         codingPlanApiKey = s.codingPlanApiKey
         hotkeyModifiers = s.hotkeyModifiers
         hotkeyKeyCode = s.hotkeyKeyCode
+        appearance = s.appearance
     }
 
     func save() {
@@ -463,9 +489,28 @@ class SettingsStore {
             executionAccount: executionAccount,
             codingPlanApiKey: codingPlanApiKey,
             hotkeyModifiers: hotkeyModifiers,
-            hotkeyKeyCode: hotkeyKeyCode
+            hotkeyKeyCode: hotkeyKeyCode,
+            appearance: appearance
         ))
         InputWindowController.shared.updateHotkey()
+        // 应用主题
+        applyAppearance()
+    }
+
+    func applyAppearance() {
+        if let window = NSApp.windows.first {
+            switch appearance {
+            case .system:
+                window.appearance = nil
+                NSApp.appearance = nil
+            case .light:
+                window.appearance = NSAppearance(named: .aqua)
+                NSApp.appearance = NSAppearance(named: .aqua)
+            case .dark:
+                window.appearance = NSAppearance(named: .darkAqua)
+                NSApp.appearance = NSAppearance(named: .darkAqua)
+            }
+        }
     }
 
     var hotkeyDisplayString: String {

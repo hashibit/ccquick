@@ -8,6 +8,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsHotkeyMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // 应用保存的主题设置
+        SettingsStore.shared.applyAppearance()
+
         // 请求通知权限
         UNUserNotificationCenter.current().delegate = NotificationService.shared
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
