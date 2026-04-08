@@ -34,7 +34,7 @@ class InputWindowController: NSObject {
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isMovableByWindowBackground = false
-        panel.hidesOnDeactivate = false
+        panel.hidesOnDeactivate = true  // 失去焦点时自动关闭
 
         let inputView = InputView { [weak self] prompt in
             logInfo("InputView onSubmit 被调用: \(prompt.prefix(50))", category: "Input")

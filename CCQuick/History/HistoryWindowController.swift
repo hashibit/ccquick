@@ -1,6 +1,11 @@
 import AppKit
 import SwiftUI
 
+// 通知名称
+extension Notification.Name {
+    static let historyWindowWillClose = Notification.Name("historyWindowWillClose")
+}
+
 class HistoryWindowController: NSWindowController {
     static let shared = HistoryWindowController()
 
@@ -51,7 +56,19 @@ class HistoryWindowController: NSWindowController {
 
 extension HistoryWindowController: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
+        // 通知 HistoryView 保存布局
+        NotificationCenter.default.post(name: .historyWindowWillClose, object: nil)
         checkHideDockIcon()
+    }
+
+    func windowDidResize(_ notification: Notification) {
+        // 窗口大小改变时保存布局（防抖）
+        NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(saveLayoutDelayed), object: nil)
+        perform(#selector(saveLayoutDelayed), with: nil, afterDelay: 0.5)
+    }
+
+    @objc private func saveLayoutDelayed() {
+        NotificationCenter.default.post(name: .saveLayoutConfig, object: nil)
     }
 
     private func checkHideDockIcon() {

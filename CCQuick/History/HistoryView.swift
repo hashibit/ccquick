@@ -4,6 +4,7 @@ import MarkdownUI
 extension Notification.Name {
     static let selectHistoryTask = Notification.Name("selectHistoryTask")
     static let deleteSelectedHistoryTask = Notification.Name("deleteSelectedHistoryTask")
+    static let saveLayoutConfig = Notification.Name("saveLayoutConfig")
 }
 
 // MARK: - 分组枚举
@@ -97,6 +98,15 @@ struct HistoryView: View {
                     }
                 }
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .saveLayoutConfig)) { _ in
+            saveLayoutConfig()
+        }
+        .onChange(of: columnVisibility) { _, _ in
+            saveLayoutConfig()
+        }
+        .onDisappear {
+            saveLayoutConfig()
         }
     }
 
