@@ -23,6 +23,11 @@ class HistoryWindowController: NSWindowController {
     required init?(coder: NSCoder) { fatalError() }
 
     func show(selectingTaskId taskId: String? = nil) {
+        // 应用当前主题
+        Task { @MainActor in
+            SettingsStore.shared.applyAppearance()
+        }
+
         if !window!.isVisible {
             window?.center()
         }

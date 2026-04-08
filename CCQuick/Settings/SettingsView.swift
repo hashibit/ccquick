@@ -145,6 +145,9 @@ struct SettingsView: View {
                             .pickerStyle(.menu)
                             .labelsHidden()
                             .frame(width: 120)
+                            .onChange(of: store.appearance) { _, _ in
+                                store.save()
+                            }
                         }
                         .padding(.vertical, 8)
                     }

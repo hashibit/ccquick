@@ -30,6 +30,11 @@ class SettingsWindowController: NSObject {
             window = newWindow
         }
 
+        // 应用当前主题
+        Task { @MainActor in
+            SettingsStore.shared.applyAppearance()
+        }
+
         window?.center()
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

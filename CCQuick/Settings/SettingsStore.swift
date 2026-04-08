@@ -498,18 +498,23 @@ class SettingsStore {
     }
 
     func applyAppearance() {
-        if let window = NSApp.windows.first {
-            switch appearance {
+        // 对所有窗口应用主题
+        let appearance: NSAppearance? = {
+            switch self.appearance {
             case .system:
-                window.appearance = nil
-                NSApp.appearance = nil
+                return nil
             case .light:
-                window.appearance = NSAppearance(named: .aqua)
-                NSApp.appearance = NSAppearance(named: .aqua)
+                return NSAppearance(named: .aqua)
             case .dark:
-                window.appearance = NSAppearance(named: .darkAqua)
-                NSApp.appearance = NSAppearance(named: .darkAqua)
+                return NSAppearance(named: .darkAqua)
             }
+        }()
+
+        NSApp.appearance = appearance
+
+        // 更新所有窗口
+        for window in NSApp.windows {
+            window.appearance = appearance
         }
     }
 
