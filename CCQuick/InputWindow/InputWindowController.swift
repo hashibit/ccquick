@@ -34,7 +34,7 @@ class InputWindowController: NSObject {
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isMovableByWindowBackground = false
-        panel.hidesOnDeactivate = true  // 失去焦点时自动关闭
+        panel.hidesOnDeactivate = false  // 通过 resignKey 手动处理
 
         let inputView = InputView { [weak self] prompt in
             logInfo("InputView onSubmit 被调用: \(prompt.prefix(50))", category: "Input")
@@ -154,7 +154,7 @@ class InputWindowController: NSObject {
     func show() {
         centerPanel()
         panel?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        // 不调用 NSApp.activate，避免激活其他窗口
         // 让 textField 成为 first responder，并将光标移到末尾
         DispatchQueue.main.async {
             if let contentView = self.panel?.contentView,
@@ -182,6 +182,8 @@ class InputWindowController: NSObject {
     }
 
     func hide() {
+        // 先让面板放弃第一响应者状态
+        panel?.makeFirstResponder(nil)
         panel?.orderOut(nil)
     }
 
@@ -195,4 +197,14 @@ class InputWindowController: NSObject {
 // 自定义 NSPanel 子类，确保 borderless 面板能成为 key window
 class KeyPanel: NSPanel {
     override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+
+    // 失去 key 状态时隐藏
+    override func resignKey() {
+        super.resignKey()
+        // 延迟一帧后隐藏，避免在同一个事件循环中操作
+        DispatchQueue.main.async {
+            self.orderOut(nil)
+        }
+    }
 }
