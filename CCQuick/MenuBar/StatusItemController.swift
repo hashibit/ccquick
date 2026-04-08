@@ -183,57 +183,21 @@ class StatusItemController {
         statusItem.button?.image = makeIcon(running: isRunning, frame: animationFrame, badgeCount: count)
     }
 
-    private func makeIcon(running: Bool, frame: Int, badgeCount: Int) -> NSImage {
-        let size = NSSize(width: 22, height: 22)
-        let image = NSImage(size: size, flipped: false) { _ in
-            // 基础图标
-            let symbolName: String
-            if running {
-                // 用不同帧模拟旋转动画
-                let frames = [
-                    "arrow.clockwise.circle",
-                    "arrow.clockwise.circle.fill",
-                    "arrow.clockwise.circle",
-                    "arrow.clockwise.circle.fill"
-                ]
-                symbolName = frames[frame % frames.count]
-            } else {
-                symbolName = "bolt.fill"
-            }
-
-            // 图标尺寸和居中偏移
-            let iconSize: CGFloat = 18
-            let offset = (size.width - iconSize) / 2
-
-            let config = NSImage.SymbolConfiguration(pointSize: iconSize, weight: .semibold)
-            if let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
-                .withSymbolConfiguration(config) {
-                // 居中绘制
-                symbol.draw(in: NSRect(x: offset, y: offset, width: iconSize, height: iconSize))
-            }
-
-            // Badge 数字（右上角）
-            if badgeCount > 0 {
-                let badgeRect = NSRect(x: 13, y: 13, width: 9, height: 9)
-                NSColor.systemRed.setFill()
-                NSBezierPath(ovalIn: badgeRect).fill()
-
-                let str = badgeCount > 9 ? "9+" : "\(badgeCount)"
-                let attrs: [NSAttributedString.Key: Any] = [
-                    .font: NSFont.boldSystemFont(ofSize: 6),
-                    .foregroundColor: NSColor.white
-                ]
-                let attrStr = NSAttributedString(string: str, attributes: attrs)
-                let strSize = attrStr.size()
-                attrStr.draw(at: NSPoint(
-                    x: badgeRect.midX - strSize.width / 2,
-                    y: badgeRect.midY - strSize.height / 2
-                ))
-            }
-            return true
+    private func makeIcon(running: Bool, frame: Int, badgeCount: Int) -> NSImage? {
+        // 根据状态选择图标
+        let imageName: String
+        if running {
+            // 忙碌时：airplane.path.dotted 和 airplane 交替动画
+            let frames = ["TrayIconPathDotted", "TrayIconAirplane"]
+            imageName = frames[frame % frames.count]
+        } else if badgeCount > 0 {
+            imageName = "TrayIconCloud"
+        } else {
+            imageName = "TrayIconLanded"
         }
-        // 始终使用 template，让系统自动适配颜色（浅色模式白色，深色模式黑色）
-        image.isTemplate = true
+
+        let image = NSImage(named: imageName)
+        image?.isTemplate = true
         return image
     }
 

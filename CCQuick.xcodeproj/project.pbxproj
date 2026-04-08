@@ -24,6 +24,7 @@
 		E903393B65AA74B2FE6572CE /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE51EB9748E93FCAEDC1B3E3 /* SettingsStore.swift */; };
 		EE9DD3BC771A54F819B66305 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD140A39950702D107F95492 /* AppDelegate.swift */; };
 		APICLIENT001 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = APICLIENT002 /* APIClient.swift */; };
+		ASSETS001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ASSETS002 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +48,7 @@
 		CD140A39950702D107F95492 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D9F8326F7723CCD7421AEA28 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		F89B269A46F2AE2F9B94E356 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		ASSETS002 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +60,17 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		RESOURCES001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ASSETS001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXGroup section */
 		02581FC041F69F77502FD55B /* Notifications */ = {
@@ -71,6 +84,7 @@
 		1E85CA991E13B4DF58A2266A /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				ASSETS002 /* Assets.xcassets */,
 				F89B269A46F2AE2F9B94E356 /* Info.plist */,
 			);
 			path = Resources;
@@ -191,6 +205,7 @@
 			buildPhases = (
 				6F05A03CDDC72AD6FDD95C38 /* Sources */,
 				22E8400D2F85995200DA3153 /* Frameworks */,
+				RESOURCES001 /* Resources */,
 			);
 			buildRules = (
 			);
