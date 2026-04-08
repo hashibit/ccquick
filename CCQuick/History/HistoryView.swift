@@ -505,27 +505,9 @@ struct TaskDetailView: View {
         let text = followUpText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
-        let responsePreview = String(t.response.prefix(2000))
-        let prompt = """
-        【上下文】原始需求：\(t.prompt)
-
-        【Claude 的回复】
-        \(responsePreview)
-
-        ---
-
-        【追问】\(text)
-        """
-        TaskManager.shared.submit(prompt: prompt)
+        // 使用 followUp 方法在当前任务会话中继续对话，不创建新历史
+        TaskManager.shared.followUp(task: t, followUpPrompt: text)
         followUpText = ""
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(500))
-            NotificationCenter.default.post(
-                name: .selectHistoryTask,
-                object: nil,
-                userInfo: ["taskId": TaskManager.shared.runningTasks.last?.id ?? ""]
-            )
-        }
     }
 }
 
