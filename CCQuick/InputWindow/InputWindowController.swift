@@ -95,8 +95,9 @@ class InputWindowController: NSObject {
                     MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID)
                 if hotKeyID.id == 1 {
                     InputWindowController.shared.handleHotkey()
+                    return noErr
                 }
-                return noErr
+                return OSStatus(eventNotHandledErr)
             },
             1,
             &eventType,

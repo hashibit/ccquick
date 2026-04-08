@@ -86,8 +86,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     Task { @MainActor in
                         HistoryWindowController.shared.show()
                     }
+                    return noErr
                 }
-                return noErr
+                return OSStatus(eventNotHandledErr)
             },
             1,
             &eventType,
