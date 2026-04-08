@@ -69,14 +69,6 @@ struct HistoryView: View {
             detailView
                 .navigationTitle("")
                 .background(Color(NSColor.textBackgroundColor))
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button("新建任务", systemImage: "square.and.pencil") {
-                            InputWindowController.shared.show()
-                        }
-                        .help("新建任务 (⌘⇧Space)")
-                    }
-                }
         }
         .navigationSplitViewStyle(.balanced)
         .ignoresSafeArea()
@@ -189,6 +181,13 @@ struct HistoryView: View {
         if let taskId = selectedTaskId {
             TaskDetailView(taskId: taskId)
                 .id(taskId)
+                .toolbar {
+                    TaskToolbarContent(
+                        taskId: taskId,
+                        selectedTaskId: selectedTaskId,
+                        onNewTask: { InputWindowController.shared.show() }
+                    )
+                }
         } else {
             VStack(spacing: 16) {
                 Image(systemName: "bolt.circle.fill")
@@ -204,6 +203,13 @@ struct HistoryView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("新建", systemImage: "square.and.pencil") {
+                        InputWindowController.shared.show()
+                    }
+                }
+            }
         }
     }
 
@@ -338,33 +344,8 @@ struct TaskDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             if let t = task {
-                // 头部信息区
-                headerView(task: t)
-
+                chatContent(task: t)
                 Divider()
-
-                // 内容区
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        if let response = task?.response, !response.isEmpty {
-                            // 使用 MarkdownUI 渲染
-                            Markdown(response)
-                                .markdownTheme(.gitHub)
-                                .textSelection(.enabled)
-                                .padding(20)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            Text("（无输出）")
-                                .font(.body)
-                                .foregroundStyle(.secondary)
-                                .padding(20)
-                        }
-                    }
-                }
-
-                Divider()
-
-                // 底部追问区
                 followUpBar(task: t)
             } else {
                 ProgressView()
@@ -381,77 +362,133 @@ struct TaskDetailView: View {
         }
     }
 
-    // MARK: - 头部视图
+    // MARK: - 聊天内容
 
-    private func headerView(task: CCTask) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // 状态和时间
-            HStack(spacing: 12) {
-                statusLabel(task: task)
-
-                Spacer()
-
-                if let finished = task.finishedAt {
-                    Text(finished.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+    @ViewBuilder
+    private func chatContent(task: CCTask) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    chatBubbles(task: task)
                 }
-
-                if task.status == .completed {
-                    Text("耗时 \(task.elapsedString)")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
+                .padding(16)
             }
-
-            // 原始提示
-            Text(task.prompt)
-                .font(.headline)
-                .lineLimit(3)
-
-            // 操作按钮
-            HStack(spacing: 12) {
-                Button {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(task.response, forType: .string)
-                } label: {
-                    Label("复制响应", systemImage: "doc.on.doc")
+            .onChange(of: task.response) { _, newValue in
+                if let lastFollowUp = extractFollowUps(from: newValue).last {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        proxy.scrollTo(lastFollowUp.id, anchor: .bottom)
+                    }
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-
-                Button {
-                    let workDirURL = URL(fileURLWithPath: task.workDir)
-                    NSWorkspace.shared.open(workDirURL)
-                } label: {
-                    Label("打开目录", systemImage: "folder")
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
             }
         }
-        .padding(16)
-        .background(Color(NSColor.textBackgroundColor))
     }
 
-    // MARK: - 状态标签
+    // MARK: - 聊天气泡列表
 
-    private func statusLabel(task: CCTask) -> some View {
-        let (text, icon, color): (String, String, Color) = {
-            switch task.status {
-            case .completed: return ("已完成", "checkmark.circle.fill", .green)
-            case .failed: return ("失败", "xmark.circle.fill", .red)
-            case .running: return ("运行中", "arrow.clockwise", .blue)
+    @ViewBuilder
+    private func chatBubbles(task: CCTask) -> some View {
+        // 用户原始问题
+        ChatBubble(role: .user, content: task.prompt, time: task.startedAt)
+
+        // AI 第一轮回复
+        let firstResponse = extractFirstResponse(from: task.response)
+        if !firstResponse.isEmpty {
+            ChatBubble(
+                role: .assistant,
+                content: firstResponse,
+                time: task.finishedAt,
+                isStreaming: task.status == .running && !hasFollowUps(from: task.response)
+            )
+        }
+
+        // 追问轮次
+        let followUps = extractFollowUps(from: task.response)
+        ForEach(followUps, id: \.id) { followUp in
+            ChatBubble(role: .user, content: followUp.question, time: nil)
+            if !followUp.answer.isEmpty {
+                ChatBubble(
+                    role: .assistant,
+                    content: followUp.answer,
+                    time: nil,
+                    isStreaming: task.status == .running && followUp.isLast
+                )
             }
-        }()
+        }
 
-        return Label(text, systemImage: icon)
-            .font(.caption.weight(.medium))
-            .foregroundStyle(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.1))
-            .clipShape(Capsule())
+        // 正在运行但还没有回复
+        if task.status == .running && task.response.isEmpty {
+            ChatBubble(role: .assistant, content: "", time: nil, isStreaming: true)
+        }
+    }
+
+    // MARK: - 解析 response
+
+    /// 提取第一轮 AI 回复（追问分隔符之前的内容）
+    private func extractFirstResponse(from response: String) -> String {
+        if let separatorRange = response.range(of: "\n\n---\n\n### 追问：") {
+            return String(response[..<separatorRange.lowerBound])
+        }
+        return response
+    }
+
+    /// 检查是否有追问
+    private func hasFollowUps(from response: String) -> Bool {
+        response.contains("\n\n---\n\n### 追问：")
+    }
+
+    /// 提取追问轮次
+    private func extractFollowUps(from response: String) -> [FollowUpRound] {
+        var rounds: [FollowUpRound] = []
+        let separator = "\n\n---\n\n### 追问："
+
+        var remaining = response
+        var isFirst = true
+
+        while let sepRange = remaining.range(of: separator) {
+            if isFirst {
+                // 第一轮分隔符之后的内容开始解析
+                isFirst = false
+            }
+
+            // 获取分隔符之后的内容
+            let afterSeparator = String(remaining[sepRange.upperBound...])
+
+            // 找到问题结束的位置（下一个换行之后）
+            if let questionEndRange = afterSeparator.range(of: "\n\n") {
+                let question = String(afterSeparator[..<questionEndRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+
+                // 获取回答部分（下一个分隔符之前，或到结尾）
+                let answerStart = questionEndRange.upperBound
+                let answerPart = String(afterSeparator[answerStart...])
+
+                let nextSepRange = answerPart.range(of: separator)
+                let answer = nextSepRange != nil
+                    ? String(answerPart[..<nextSepRange!.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    : answerPart.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                rounds.append(FollowUpRound(
+                    id: "followup-\(rounds.count)",
+                    question: question,
+                    answer: answer,
+                    isLast: nextSepRange == nil && task?.status == .running
+                ))
+
+                // 继续处理剩余部分
+                remaining = nextSepRange != nil ? answerPart : ""
+            } else {
+                // 问题后面没有回答（正在生成）
+                let question = afterSeparator.trimmingCharacters(in: .whitespacesAndNewlines)
+                rounds.append(FollowUpRound(
+                    id: "followup-\(rounds.count)",
+                    question: question,
+                    answer: "",
+                    isLast: task?.status == .running
+                ))
+                break
+            }
+        }
+
+        return rounds
     }
 
     // MARK: - 追问栏
@@ -461,7 +498,7 @@ struct TaskDetailView: View {
             if task.status == .running {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("正在执行...")
+                    Text("正在输入...")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -508,6 +545,227 @@ struct TaskDetailView: View {
         // 使用 followUp 方法在当前任务会话中继续对话，不创建新历史
         TaskManager.shared.followUp(task: t, followUpPrompt: text)
         followUpText = ""
+    }
+}
+
+// MARK: - 追问轮次数据
+
+struct FollowUpRound: Identifiable {
+    let id: String
+    let question: String
+    let answer: String
+    let isLast: Bool
+}
+
+// MARK: - 聊天气泡
+
+enum ChatRole {
+    case user
+    case assistant
+}
+
+struct ChatBubble: View {
+    let role: ChatRole
+    let content: String
+    let time: Date?
+    var isStreaming: Bool = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            if role == .assistant {
+                // AI 头像
+                avatarView(role: .assistant)
+            }
+
+            VStack(alignment: role == .user ? .trailing : .leading, spacing: 4) {
+                // 消息内容
+                messageContent
+
+                // 时间戳
+                if let time = time, !isStreaming {
+                    Text(time.formatted(date: .omitted, time: .shortened))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .frame(maxWidth: 600, alignment: role == .user ? .trailing : .leading)
+
+            if role == .user {
+                // 用户头像
+                avatarView(role: .user)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: role == .user ? .trailing : .leading)
+    }
+
+    @ViewBuilder
+    private var messageContent: some View {
+        if isStreaming && content.isEmpty {
+            // 正在输入状态
+            HStack(spacing: 4) {
+                TypingIndicator()
+                Text("正在输入...")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(role == .user ? Color.accentColor.opacity(0.8) : Color(NSColor.controlBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        } else if isStreaming {
+            // 流式输出中
+            VStack(alignment: .leading, spacing: 4) {
+                Markdown(content)
+                    .markdownTheme(.gitHub)
+                    .textSelection(.enabled)
+
+                HStack(spacing: 4) {
+                    TypingIndicator()
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(NSColor.controlBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        } else if !content.isEmpty {
+            // 完整消息
+            if role == .user {
+                Text(content)
+                    .font(.body)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.accentColor.opacity(0.8))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            } else {
+                Markdown(content)
+                    .markdownTheme(.gitHub)
+                    .textSelection(.enabled)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+        }
+    }
+
+    private func avatarView(role: ChatRole) -> some View {
+        Circle()
+            .fill(role == .user ? Color.accentColor.opacity(0.6) : Color.purple.opacity(0.3))
+            .frame(width: 32, height: 32)
+            .overlay {
+                Image(systemName: role == .user ? "person.fill" : "bolt.fill")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(role == .user ? .white : .purple)
+            }
+    }
+}
+
+// MARK: - 任务 Toolbar
+
+struct TaskToolbarContent: ToolbarContent {
+    let taskId: String
+    let selectedTaskId: String?
+    let onNewTask: () -> Void
+
+    @ObservationIgnored @Bindable private var taskManager = TaskManager.shared
+
+    var body: some ToolbarContent {
+        ToolbarItemGroup(placement: .automatic) {
+            toolbarContent
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button("新建", systemImage: "square.and.pencil") {
+                onNewTask()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var toolbarContent: some View {
+        if let task = currentTask {
+            HStack(spacing: 8) {
+                // 状态标签
+                TaskStatusLabel(task: task)
+
+                // 复制按钮
+                if !task.response.isEmpty {
+                    Button {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(task.response, forType: .string)
+                    } label: {
+                        Label("复制", systemImage: "doc.on.doc")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+
+                // 打开目录按钮
+                Button {
+                    let workDirURL = URL(fileURLWithPath: task.workDir)
+                    NSWorkspace.shared.open(workDirURL)
+                } label: {
+                    Label("目录", systemImage: "folder")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+        }
+    }
+
+    private var currentTask: CCTask? {
+        taskManager.runningTasks.first { $0.id == taskId } ?? TaskStore.shared.load(id: taskId)
+    }
+}
+
+struct TaskStatusLabel: View {
+    let task: CCTask
+
+    var body: some View {
+        let config = statusConfig()
+        Label(config.text, systemImage: config.icon)
+            .font(.caption.weight(.medium))
+            .foregroundStyle(config.color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(config.color.opacity(0.1))
+            .clipShape(Capsule())
+    }
+
+    private func statusConfig() -> (text: String, icon: String, color: Color) {
+        switch task.status {
+        case .completed: return ("已完成", "checkmark.circle.fill", .green)
+        case .failed: return ("失败", "xmark.circle.fill", .red)
+        case .running: return ("运行中", "arrow.clockwise", .blue)
+        }
+    }
+}
+
+// MARK: - 打字动画指示器
+
+struct TypingIndicator: View {
+    @State private var animationPhase = 0
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .fill(Color.secondary)
+                    .frame(width: 4, height: 4)
+                    .scaleEffect(animationPhase == index ? 1.2 : 0.8)
+                    .opacity(animationPhase == index ? 1 : 0.5)
+            }
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
+                animationPhase = 1
+            }
+            Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { _ in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    animationPhase = (animationPhase + 1) % 3
+                }
+            }
+        }
     }
 }
 
