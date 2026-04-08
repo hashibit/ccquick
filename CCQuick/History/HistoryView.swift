@@ -564,8 +564,9 @@ struct ChatBubble: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             if role == .assistant {
-                // AI 头像
+                // AI 头像：padding(.top) 与气泡内边距对齐，让头像与首行文字齐平
                 avatarView(role: .assistant)
+                    .padding(.top, 12)
             }
 
             VStack(alignment: role == .user ? .trailing : .leading, spacing: 4) {
@@ -607,7 +608,7 @@ struct ChatBubble: View {
             // 流式输出中
             VStack(alignment: .leading, spacing: 4) {
                 Markdown(content)
-                    .markdownTheme(.gitHub)
+                    .markdownTheme(.gitHub.text { FontFamily(.system()); FontSize(NSFont.systemFontSize) })
                     .textSelection(.enabled)
 
                 HStack(spacing: 4) {
@@ -630,7 +631,7 @@ struct ChatBubble: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             } else {
                 Markdown(content)
-                    .markdownTheme(.gitHub)
+                    .markdownTheme(.gitHub.text { FontFamily(.system()); FontSize(NSFont.systemFontSize) })
                     .textSelection(.enabled)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
@@ -675,30 +676,20 @@ struct TaskToolbarContent: ToolbarContent {
     @ViewBuilder
     private var toolbarContent: some View {
         if let task = currentTask {
-            HStack(spacing: 8) {
-                // 状态标签
-                TaskStatusLabel(task: task)
-
-                // 复制按钮
-                if !task.response.isEmpty {
-                    Button {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(task.response, forType: .string)
-                    } label: {
-                        Image(systemName: "doc.on.doc")
-                    }
-                    .help("复制回复内容")
+            // 复制按钮
+            if !task.response.isEmpty {
+                Button("复制", systemImage: "doc.on.doc") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(task.response, forType: .string)
                 }
-
-                // 打开目录按钮
-                Button {
-                    let workDirURL = URL(fileURLWithPath: task.workDir)
-                    NSWorkspace.shared.open(workDirURL)
-                } label: {
-                    Image(systemName: "folder")
-                }
-                .help("打开工作目录")
+                .help("复制回复内容")
             }
+
+            // 打开目录按钮
+            Button("目录", systemImage: "folder") {
+                NSWorkspace.shared.open(URL(fileURLWithPath: task.workDir))
+            }
+            .help("打开工作目录")
         }
     }
 

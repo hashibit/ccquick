@@ -88,8 +88,14 @@ class InputWindowController: NSObject {
 
         InstallEventHandler(
             GetEventDispatcherTarget(),
-            { (_, _, _) -> OSStatus in
-                InputWindowController.shared.handleHotkey()
+            { _, event, _ -> OSStatus in
+                var hotKeyID = EventHotKeyID()
+                GetEventParameter(event!, EventParamName(kEventParamDirectObject),
+                    EventParamType(typeEventHotKeyID), nil,
+                    MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID)
+                if hotKeyID.id == 1 {
+                    InputWindowController.shared.handleHotkey()
+                }
                 return noErr
             },
             1,

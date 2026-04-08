@@ -77,9 +77,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         InstallEventHandler(
             GetEventDispatcherTarget(),
-            { _, _, _ -> OSStatus in
-                Task { @MainActor in
-                    HistoryWindowController.shared.show()
+            { _, event, _ -> OSStatus in
+                var hotKeyID = EventHotKeyID()
+                GetEventParameter(event!, EventParamName(kEventParamDirectObject),
+                    EventParamType(typeEventHotKeyID), nil,
+                    MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID)
+                if hotKeyID.id == 2 {
+                    Task { @MainActor in
+                        HistoryWindowController.shared.show()
+                    }
                 }
                 return noErr
             },

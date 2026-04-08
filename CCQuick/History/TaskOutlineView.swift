@@ -29,7 +29,7 @@ final class TaskOutlineView: NSOutlineView {
         addTableColumn(column)
 
         // 行高
-        rowHeight = 54
+        rowHeight = 64
         intercellSpacing = NSSize(width: 0, height: 0)
 
         // 不显示列头
@@ -218,19 +218,19 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
                     statusBar.heightAnchor.constraint(equalToConstant: 36),
 
                     // 标题：状态条右侧
-                    titleField.leadingAnchor.constraint(equalTo: statusBar.trailingAnchor, constant: 6),
-                    titleField.topAnchor.constraint(equalTo: cell!.topAnchor, constant: 8),
-                    titleField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -8),
+                    titleField.leadingAnchor.constraint(equalTo: statusBar.trailingAnchor, constant: 8),
+                    titleField.topAnchor.constraint(equalTo: cell!.topAnchor, constant: 10),
+                    titleField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -12),
 
                     // 预览：标题下方
                     previewField.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
-                    previewField.topAnchor.constraint(equalTo: titleField.bottomAnchor, constant: 2),
-                    previewField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -8),
+                    previewField.topAnchor.constraint(equalTo: titleField.bottomAnchor, constant: 4),
+                    previewField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -12),
 
                     // 信息行：预览下方
                     infoField.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
-                    infoField.topAnchor.constraint(equalTo: previewField.bottomAnchor, constant: 2),
-                    infoField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -8),
+                    infoField.topAnchor.constraint(equalTo: previewField.bottomAnchor, constant: 3),
+                    infoField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -12),
                 ])
             }
 
@@ -242,19 +242,19 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
 
             if let titleField = cell?.viewWithIdentifier("Title") as? NSTextField {
                 titleField.stringValue = task.shortPrompt
-                titleField.font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .medium)
+                titleField.font = NSFont.preferredFont(forTextStyle: .body)
                 titleField.textColor = NSColor.labelColor
             }
 
             if let previewField = cell?.viewWithIdentifier("Preview") as? NSTextField {
                 if task.status == .running {
                     previewField.stringValue = "运行中..."
-                    previewField.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+                    previewField.font = NSFont.preferredFont(forTextStyle: .caption1)
                     previewField.textColor = NSColor.systemBlue
                 } else {
                     let preview = String(task.response.prefix(60)).replacingOccurrences(of: "\n", with: " ")
                     previewField.stringValue = preview.isEmpty ? "无内容" : preview
-                    previewField.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+                    previewField.font = NSFont.preferredFont(forTextStyle: .caption1)
                     previewField.textColor = NSColor.secondaryLabelColor
                 }
             }
@@ -265,7 +265,7 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
                     infoText += " · \(task.elapsedString)"
                 }
                 infoField.stringValue = infoText
-                infoField.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize - 1)
+                infoField.font = NSFont.preferredFont(forTextStyle: .caption2)
                 infoField.textColor = NSColor.tertiaryLabelColor
             }
 
