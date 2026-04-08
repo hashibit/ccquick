@@ -68,7 +68,6 @@ struct HistoryView: View {
                 .background(Color(NSColor.textBackgroundColor))
         }
         .navigationSplitViewStyle(.balanced)
-        .ignoresSafeArea()
         .onAppear {
             reload()
         }
@@ -134,6 +133,17 @@ struct HistoryView: View {
             }
         )
         .navigationTitle("")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("删除", systemImage: "trash") {
+                    if let selectedId = selectedTaskId {
+                        deleteTask(id: selectedId)
+                    }
+                }
+                .disabled(selectedTaskId == nil)
+                .help("删除选中任务")
+            }
+        }
     }
 
     /// 双击打开任务详情独立窗口
@@ -316,6 +326,7 @@ struct TaskDetailView: View {
         VStack(spacing: 0) {
             if let t = task {
                 chatContent(task: t)
+
                 Divider()
                 followUpBar(task: t)
             } else {

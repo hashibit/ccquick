@@ -1,11 +1,14 @@
 import AppKit
 import SwiftUI
 import UserNotifications
+import Carbon
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItemController: StatusItemController?
     private var inputWindowController: InputWindowController?
     private var settingsHotkeyMonitor: Any?
+    private var historyHotkeyRef: EventHotKeyRef?
+    private var historyHotkeyHandler: EventHandlerRef?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 应用保存的主题设置
@@ -37,6 +40,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 注册 cmd+, 快捷键
         registerSettingsHotkey()
+
+        // 注册 cmd+shift+h 全局快捷键
+        registerHistoryHotkey()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -62,9 +68,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return flags == .command && event.keyCode == 43
     }
 
+    private func registerHistoryHotkey() {
+        // 安装事件处理器
+        var eventType = EventTypeSpec(
+            eventClass: OSType(kEventClassKeyboard),
+            eventKind: OSType(kEventHotKeyPressed)
+        )
+
+        InstallEventHandler(
+            GetEventDispatcherTarget(),
+            { _, _, _ -> OSStatus in
+                Task { @MainActor in
+                    HistoryWindowController.shared.show()
+                }
+                return noErr
+            },
+            1,
+            &eventType,
+            nil,
+            &historyHotkeyHandler
+        )
+
+        // 注册热键: cmd+shift+h
+        // keyCode 4 = 'h', modifiers: cmd + shift
+        let modifiers: UInt32 = UInt32(cmdKey | shiftKey)
+        let status = RegisterEventHotKey(
+            4, // keyCode for 'h'
+            modifiers,
+            EventHotKeyID(signature: OSType(0x48535459), id: 2), // 'HSTR' for history
+            GetEventDispatcherTarget(),
+            0,
+            &historyHotkeyRef
+        )
+
+        print("[HistoryHotkey] 注册状态: \(status == noErr ? "✓ 成功" : "✗ 失败 (code=\(status))")")
+    }
+
     deinit {
         if let m = settingsHotkeyMonitor {
             NSEvent.removeMonitor(m)
         }
+        if let ref = historyHotkeyRef { UnregisterEventHotKey(ref) }
+        if let handler = historyHotkeyHandler { RemoveEventHandler(handler) }
     }
 }

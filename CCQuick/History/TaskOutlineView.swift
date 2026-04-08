@@ -212,25 +212,25 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
 
                 NSLayoutConstraint.activate([
                     // 状态条：左侧，垂直居中
-                    statusBar.leadingAnchor.constraint(equalTo: cell!.leadingAnchor, constant: 4),
+                    statusBar.leadingAnchor.constraint(equalTo: cell!.leadingAnchor, constant: 2),
                     statusBar.centerYAnchor.constraint(equalTo: cell!.centerYAnchor),
                     statusBar.widthAnchor.constraint(equalToConstant: 3),
                     statusBar.heightAnchor.constraint(equalToConstant: 36),
 
                     // 标题：状态条右侧
-                    titleField.leadingAnchor.constraint(equalTo: statusBar.trailingAnchor, constant: 8),
+                    titleField.leadingAnchor.constraint(equalTo: statusBar.trailingAnchor, constant: 6),
                     titleField.topAnchor.constraint(equalTo: cell!.topAnchor, constant: 8),
-                    titleField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -12),
+                    titleField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -8),
 
                     // 预览：标题下方
                     previewField.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
                     previewField.topAnchor.constraint(equalTo: titleField.bottomAnchor, constant: 2),
-                    previewField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -12),
+                    previewField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -8),
 
                     // 信息行：预览下方
                     infoField.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
                     infoField.topAnchor.constraint(equalTo: previewField.bottomAnchor, constant: 2),
-                    infoField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -12),
+                    infoField.trailingAnchor.constraint(lessThanOrEqualTo: cell!.trailingAnchor, constant: -8),
                 ])
             }
 

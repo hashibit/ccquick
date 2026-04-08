@@ -18,6 +18,8 @@ class HistoryWindowController: NSWindowController {
         window.minSize = NSSize(width: 800, height: 500)
         // 自动保存窗口位置和大小
         window.setFrameAutosaveName("HistoryWindow")
+        // 关键：防止失去焦点时窗口隐藏，确保 cmd+tab 能正确切换回来
+        window.hidesOnDeactivate = false
         super.init(window: window)
         window.delegate = self
     }
@@ -30,14 +32,15 @@ class HistoryWindowController: NSWindowController {
             SettingsStore.shared.applyAppearance()
         }
 
+        // 先设置 activation policy，确保应用出现在 cmd+tab 列表中
+        NSApp.setActivationPolicy(.regular)
+
         if !window!.isVisible {
             window?.center()
         }
-        showWindow(nil)
+        // 使用 makeKeyAndOrderFront 确保窗口成为 key window
+        window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-
-        // 显示 Dock 图标
-        NSApp.setActivationPolicy(.regular)
 
         if let taskId = taskId {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -70,6 +73,8 @@ class TaskDetailWindowController: NSWindowController {
         window.minSize = NSSize(width: 500, height: 400)
         window.contentView = NSHostingView(rootView: TaskDetailWindowView(taskId: taskId))
         window.setFrameAutosaveName("TaskDetailWindow-\(taskId)")
+        // 关键：防止失去焦点时窗口隐藏，确保 cmd+tab 能正确切换回来
+        window.hidesOnDeactivate = false
         super.init(window: window)
         window.delegate = self
     }
