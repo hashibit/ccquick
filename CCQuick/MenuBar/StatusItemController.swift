@@ -79,38 +79,12 @@ struct LogView: View {
             Divider()
 
             ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 2) {
-                        ForEach(logManager.logs) { entry in
-                            HStack(alignment: .top, spacing: 4) {
-                                Text(entry.formattedTime)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundColor(.secondary)
-                                    .frame(width: 70, alignment: .leading)
-                                Text(entry.level.rawValue)
-                                    .font(.system(.caption2, design: .monospaced))
-                                    .foregroundColor(entry.level.color)
-                                    .frame(width: 45, alignment: .leading)
-                                Text("[\(entry.category)]")
-                                    .font(.system(.caption2, design: .monospaced))
-                                    .foregroundColor(.blue)
-                                    .frame(width: 80, alignment: .leading)
-                                Text(entry.message)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundColor(.primary)
-                                    .textSelection(.enabled)
-                                Spacer()
-                            }
-                            .id(entry.id)
+                SelectableTextView(logManager: logManager)
+                    .onChange(of: logManager.logs.count) { _, _ in
+                        if autoScroll, let last = logManager.logs.last {
+                            proxy.scrollTo(last.id, anchor: .bottom)
                         }
                     }
-                    .padding(4)
-                }
-                .onChange(of: logManager.logs.count) { _, _ in
-                    if autoScroll, let last = logManager.logs.last {
-                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
-                    }
-                }
             }
         }
         .background(Color(NSColor.textBackgroundColor))
