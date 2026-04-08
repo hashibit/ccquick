@@ -230,4 +230,103 @@ class TaskRunner {
             Task { @MainActor in onComplete(failed) }
         }
     }
+
+    /// 追问执行：在同一个任务目录中继续对话
+    /// 追问的输出会追加到之前的 response，用分隔符区分不同轮次
+    static func runFollowUp(
+        task: CCTask,
+        originalPrompt: String,
+        originalResponse: String,
+        followUpPrompt: String,
+        onOutput: @escaping (String) -> Void,
+        onComplete: @escaping (CCTask) -> Void
+    ) {
+        guard let claudePath = findClaudePath() else {
+            var failed = task
+            failed.status = .failed
+            failed.response = originalResponse + "\n\n---\n\n**追问失败：找不到 claude CLI**"
+            failed.finishedAt = .now
+            Task { @MainActor in onComplete(failed) }
+            return
+        }
+
+        let workDir = URL(fileURLWithPath: task.workDir)
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: claudePath)
+
+        // 构建追问 prompt（包含历史上下文）
+        let followUpContext = """
+        【历史对话】
+        原始需求：\(originalPrompt)
+
+        之前的回复：
+        \(originalResponse)
+
+        ---
+        【追问】\(followUpPrompt)
+
+        请继续回答，注意保持上下文连贯。
+        """
+        process.arguments = ["--dangerously-skip-permissions", "-p", followUpContext]
+        process.currentDirectoryURL = workDir
+
+        // 设置环境变量
+        var env = ProcessInfo.processInfo.environment
+        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(env["PATH"] ?? "")"
+
+        let settings = AppSettings.current
+        if settings.executionAccount == .codingPlan {
+            let apiKey = settings.codingPlanApiKey.trimmingCharacters(in: .whitespaces)
+            if !apiKey.isEmpty {
+                let providers = CodingPlanProvider.matchProviders(for: apiKey)
+                if let provider = providers.first {
+                    env["ANTHROPIC_BASE_URL"] = provider.baseURL
+                    env["ANTHROPIC_MODEL"] = provider.sonnetModel
+                    env["ANTHROPIC_AUTH_TOKEN"] = apiKey
+                }
+            }
+        }
+
+        process.environment = env
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+
+        var newResponse = ""
+
+        pipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
+            newResponse += text
+            Task { @MainActor in onOutput(text) }
+        }
+
+        process.terminationHandler = { p in
+            pipe.fileHandleForReading.readabilityHandler = nil
+            let remaining = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let text = String(data: remaining, encoding: .utf8), !text.isEmpty {
+                newResponse += text
+            }
+
+            // 追问的结果追加到之前的 response
+            var completed = task
+            let separator = "\n\n---\n\n### 追问：\(followUpPrompt)\n\n"
+            completed.response = originalResponse + separator + newResponse
+            completed.finishedAt = .now
+            completed.status = (p.terminationStatus == 0) ? .completed : .failed
+            Task { @MainActor in onComplete(completed) }
+        }
+
+        do {
+            try process.run()
+        } catch {
+            var failed = task
+            failed.status = .failed
+            failed.response = originalResponse + "\n\n---\n\n**追问启动失败：\(error.localizedDescription)**"
+            failed.finishedAt = .now
+            Task { @MainActor in onComplete(failed) }
+        }
+    }
 }

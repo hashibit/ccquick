@@ -40,6 +40,21 @@ class TaskManager {
         let promptFile = workDirURL.appendingPathComponent("prompt.txt")
         try? trimmed.write(to: promptFile, atomically: true, encoding: .utf8)
 
+        // 立即创建 running 状态的任务，让 tray 显示忙碌状态
+        let task = CCTask(
+            id: id,
+            prompt: trimmed,
+            workDir: workDir,
+            status: .running,
+            startedAt: .now,
+            finishedAt: nil,
+            response: "",
+            viewed: false
+        )
+
+        runningTasks.append(task)
+        logDebug("任务添加到 runningTasks, count=\(runningTasks.count)", category: "Task")
+
         // 检查执行账户类型
         let settings = AppSettings.current
         if settings.executionAccount == .codingPlan {
@@ -49,6 +64,7 @@ class TaskManager {
                 if let provider = providers.first {
                     // 两阶段执行
                     twoStageExecute(
+                        task: task,
                         prompt: trimmed,
                         workDir: workDir,
                         provider: provider,
@@ -60,17 +76,25 @@ class TaskManager {
         }
 
         // 默认 Claude 订阅：直接执行（无两阶段）
-        executeDirectly(prompt: trimmed, workDir: workDir)
+        executeDirectly(task: task)
     }
 
     /// 两阶段执行
     private func twoStageExecute(
+        task: CCTask,
         prompt: String,
         workDir: String,
         provider: CodingPlanProvider,
         apiKey: String
     ) {
         logInfo("第一阶段：询问 LLM...", category: "Task")
+
+        // 保存任务状态
+        do {
+            try TaskStore.shared.save(task)
+        } catch {
+            logError("保存任务失败: \(error)", category: "Task")
+        }
 
         Task {
             do {
@@ -83,78 +107,57 @@ class TaskManager {
                 if response.canAnswerDirectly, let answer = response.answer {
                     // 直接回答
                     logInfo("直接回答任务", category: "Task")
-                    await handleQuickAnswer(prompt: prompt, workDir: workDir, answer: answer)
+                    await handleQuickAnswer(task: task, answer: answer)
                 } else if let plan = response.plan {
                     // 需要计划执行
                     logInfo("需要计划执行: \(plan.prefix(50))...", category: "Task")
-                    await executeWithPlan(prompt: prompt, workDir: workDir, plan: plan)
+                    await executeWithPlan(task: task, plan: plan)
                 } else {
                     // 异常情况，直接执行
                     logWarning("第一阶段返回无效响应，直接执行", category: "Task")
-                    executeDirectly(prompt: prompt, workDir: workDir)
+                    executeDirectly(task: task)
                 }
             } catch {
                 logError("第一阶段失败: \(error.localizedDescription)", category: "Task")
                 // 降级：直接执行
-                executeDirectly(prompt: prompt, workDir: workDir)
+                executeDirectly(task: task)
             }
         }
     }
 
     /// 处理快速回答
-    private func handleQuickAnswer(prompt: String, workDir: String, answer: String) async {
-        let id = URL(fileURLWithPath: workDir).lastPathComponent
-
+    private func handleQuickAnswer(task: CCTask, answer: String) async {
         // 写入响应文件
-        let workDirURL = URL(fileURLWithPath: workDir)
+        let workDirURL = URL(fileURLWithPath: task.workDir)
         let responseFile = workDirURL.appendingPathComponent("response.txt")
         try? answer.write(to: responseFile, atomically: true, encoding: .utf8)
 
-        // 创建已完成的任务
-        var task = CCTask(
-            id: id,
-            prompt: prompt,
-            workDir: workDir,
-            status: .completed,
-            startedAt: .now,
-            finishedAt: .now,
-            response: answer,
-            viewed: false
-        )
+        // 更新任务状态
+        var completedTask = task
+        completedTask.status = .completed
+        completedTask.finishedAt = .now
+        completedTask.response = answer
+        completedTask.viewed = false
+
+        // 从 runningTasks 移除，添加到未查看列表
+        runningTasks.removeAll { $0.id == task.id }
+        unviewedTasks.append(completedTask)
 
         // 保存任务
         do {
-            try TaskStore.shared.save(task)
+            try TaskStore.shared.save(completedTask)
         } catch {
             logError("保存任务失败: \(error)", category: "Task")
         }
 
-        // 添加到未查看列表
-        unviewedTasks.append(task)
-
         // 通知
-        onTaskCompleted?(task)
-        NotificationService.shared.notify(task: task)
+        onTaskCompleted?(completedTask)
+        NotificationService.shared.notify(task: completedTask)
     }
 
     /// 带计划执行
-    private func executeWithPlan(prompt: String, workDir: String, plan: String) async {
-        let id = URL(fileURLWithPath: workDir).lastPathComponent
-
-        let task = CCTask(
-            id: id,
-            prompt: prompt,
-            workDir: workDir,
-            status: .running,
-            startedAt: .now,
-            finishedAt: nil,
-            response: "",
-            viewed: false
-        )
-
-        runningTasks.append(task)
-        logDebug("任务添加到 runningTasks, count=\(runningTasks.count)", category: "Task")
-
+    private func executeWithPlan(task: CCTask, plan: String) async {
+        // 保存任务
         do {
             try TaskStore.shared.save(task)
         } catch {
@@ -181,26 +184,11 @@ class TaskManager {
     }
 
     /// 直接执行（无两阶段）
-    private func executeDirectly(prompt: String, workDir: String) {
-        let id = URL(fileURLWithPath: workDir).lastPathComponent
-
-        let task = CCTask(
-            id: id,
-            prompt: prompt,
-            workDir: workDir,
-            status: .running,
-            startedAt: .now,
-            finishedAt: nil,
-            response: "",
-            viewed: false
-        )
-
-        runningTasks.append(task)
-        logDebug("任务添加到 runningTasks, count=\(runningTasks.count)", category: "Task")
-
+    private func executeDirectly(task: CCTask) {
+        // 保存任务
         do {
             try TaskStore.shared.save(task)
-            logDebug("任务已保存: \(id)", category: "Task")
+            logDebug("任务已保存: \(task.id)", category: "Task")
         } catch {
             logError("保存任务失败: \(error)", category: "Task")
         }
@@ -233,6 +221,68 @@ class TaskManager {
             print("Failed to mark task as viewed: \(error)")
         }
         unviewedTasks.removeAll { $0.id == taskId }
+    }
+
+    /// 追问：在当前任务的会话中继续对话，不创建新历史
+    func followUp(task: CCTask, followUpPrompt: String) {
+        guard task.status != .running else {
+            logWarning("任务正在运行，无法追问", category: "Task")
+            return
+        }
+
+        logInfo("追问任务: \(task.id), 内容: \(followUpPrompt.prefix(50))...", category: "Task")
+
+        // 将任务重新加入 runningTasks
+        var runningTask = task
+        runningTask.status = .running
+        runningTask.finishedAt = nil
+        runningTasks.append(runningTask)
+
+        // 保存任务状态
+        do {
+            try TaskStore.shared.save(runningTask)
+        } catch {
+            logError("保存任务失败: \(error)", category: "Task")
+        }
+
+        // 构建追问的 prompt（包含历史上下文）
+        let contextPrompt = """
+        【历史对话】
+        原始需求：\(task.prompt)
+
+        之前的回复：
+        \(task.response)
+
+        ---
+        【追问】\(followUpPrompt)
+
+        请继续回答，注意保持上下文连贯。
+        """
+
+        // 执行追问
+        TaskRunner.runFollowUp(
+            task: runningTask,
+            originalPrompt: task.prompt,
+            originalResponse: task.response,
+            followUpPrompt: followUpPrompt,
+            onOutput: { output in
+                logDebug("追问输出: \(output.prefix(100))", category: "Task")
+            },
+            onComplete: { [weak self] completed in
+                guard let self = self else { return }
+                logInfo("追问完成: \(completed.id)", category: "Task")
+                // 更新任务状态
+                self.runningTasks.removeAll { $0.id == completed.id }
+                // 不添加到 unviewedTasks，因为这是同一个任务的延续
+                // 直接更新磁盘上的任务
+                do {
+                    try TaskStore.shared.save(completed)
+                } catch {
+                    logError("保存完成任务失败: \(error)", category: "Task")
+                }
+                self.onTaskCompleted?(completed)
+            }
+        )
     }
 
     var unviewedCount: Int { unviewedTasks.count }

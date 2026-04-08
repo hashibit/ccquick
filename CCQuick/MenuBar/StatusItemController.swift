@@ -195,7 +195,8 @@ class StatusItemController {
             }
             return true
         }
-        image.isTemplate = (badgeCount == 0 && !running)
+        // 始终使用 template，让系统自动适配颜色（浅色模式白色，深色模式黑色）
+        image.isTemplate = true
         return image
     }
 
