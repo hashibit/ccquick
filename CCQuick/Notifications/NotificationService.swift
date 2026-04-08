@@ -24,10 +24,21 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         UNUserNotificationCenter.current().add(request)
     }
 
-    /// 截取答案的前 120 字符作为通知摘要
+    /// 截取答案的前 120 字符，去掉 Markdown 格式标记
     private func shortResponse(_ response: String) -> String {
         let trimmed = response.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.count > 120 ? String(trimmed.prefix(120)) + "…" : trimmed
+        // 去掉常见 Markdown 格式
+        var clean = trimmed
+            .replacingOccurrences(of: "**", with: "")
+            .replacingOccurrences(of: "__", with: "")
+            .replacingOccurrences(of: "##", with: "")
+            .replacingOccurrences(of: "#", with: "")
+            .replacingOccurrences(of: "`", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .replacingOccurrences(of: "```", with: "")  // 多次确保去掉
+            .replacingOccurrences(of: "---", with: "")
+            .replacingOccurrences(of: "- ", with: "• ")
+        return clean.count > 120 ? String(clean.prefix(120)) + "…" : clean
     }
 
     // 用户点击通知时触发

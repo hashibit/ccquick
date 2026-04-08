@@ -201,14 +201,18 @@ class StatusItemController {
                 symbolName = "bolt.fill"
             }
 
-            // 放大图标以匹配其他菜单栏应用
-            let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
+            // 图标尺寸和居中偏移
+            let iconSize: CGFloat = 18
+            let offset = (size.width - iconSize) / 2
+
+            let config = NSImage.SymbolConfiguration(pointSize: iconSize, weight: .semibold)
             if let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
                 .withSymbolConfiguration(config) {
-                symbol.draw(in: NSRect(x: 0, y: 0, width: 18, height: 18))
+                // 居中绘制
+                symbol.draw(in: NSRect(x: offset, y: offset, width: iconSize, height: iconSize))
             }
 
-            // Badge 数字
+            // Badge 数字（右上角）
             if badgeCount > 0 {
                 let badgeRect = NSRect(x: 13, y: 13, width: 9, height: 9)
                 NSColor.systemRed.setFill()
