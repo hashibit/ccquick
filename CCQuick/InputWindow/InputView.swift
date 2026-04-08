@@ -57,7 +57,7 @@ struct InputView: View {
     }
 }
 
-// 使用 NSTextField 确保在 borderless NSPanel 中能正确获得焦点和处理 ESC
+// 使用 NSTextField 确保在 borderless NSPanel 中能正确获得焦点和处理回车/ESC
 struct FocusableTextField: NSViewRepresentable {
     let placeholder: String
     @Binding var text: String
@@ -76,6 +76,9 @@ struct FocusableTextField: NSViewRepresentable {
         textField.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
         textField.onSubmit = onSubmit
         textField.onEscape = onEscape
+        // 使用 target/action 处理回车键
+        textField.target = context.coordinator
+        textField.action = #selector(Coordinator.handleSubmitAction(_:))
         return textField
     }
 
@@ -86,6 +89,9 @@ struct FocusableTextField: NSViewRepresentable {
         }
         nsView.onSubmit = onSubmit
         nsView.onEscape = onEscape
+        // 确保 target/action 更新
+        nsView.target = context.coordinator
+        nsView.action = #selector(Coordinator.handleSubmitAction(_:))
     }
 
     func makeCoordinator() -> Coordinator {
@@ -114,8 +120,9 @@ struct FocusableTextField: NSViewRepresentable {
             }
         }
 
-        // 提交后清空文本
-        func handleSubmit() {
+        // 回车键触发此 action
+        @objc func handleSubmitAction(_ sender: NSTextField) {
+            logInfo("handleSubmitAction 触发", category: "Input")
             parent.onSubmit()
         }
     }
@@ -124,19 +131,6 @@ struct FocusableTextField: NSViewRepresentable {
 class FocusableNSTextField: NSTextField {
     var onSubmit: (() -> Void)?
     var onEscape: (() -> Void)?
-
-    override func keyDown(with event: NSEvent) {
-        logDebug("keyDown: keyCode=\(event.keyCode)", category: "Input")
-        if event.keyCode == 36 { // Return/Enter
-            logInfo("Enter 按下，触发 onSubmit", category: "Input")
-            onSubmit?()
-        } else if event.keyCode == 53 { // ESC
-            logInfo("ESC 按下", category: "Input")
-            onEscape?()
-        } else {
-            super.keyDown(with: event)
-        }
-    }
 
     // 确保获得焦点
     override func becomeFirstResponder() -> Bool {
@@ -149,5 +143,15 @@ class FocusableNSTextField: NSTextField {
             }
         }
         return result
+    }
+
+    // 处理 ESC 键（回车键由 target/action 处理）
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 { // ESC
+            logInfo("ESC 按下", category: "Input")
+            onEscape?()
+        } else {
+            super.keyDown(with: event)
+        }
     }
 }
