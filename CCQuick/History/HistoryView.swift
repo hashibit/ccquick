@@ -4,7 +4,6 @@ import MarkdownUI
 extension Notification.Name {
     static let selectHistoryTask = Notification.Name("selectHistoryTask")
     static let deleteSelectedHistoryTask = Notification.Name("deleteSelectedHistoryTask")
-    static let saveLayoutConfig = Notification.Name("saveLayoutConfig")
 }
 
 // MARK: - 分组枚举
@@ -46,25 +45,22 @@ struct HistoryView: View {
     @State private var selectedTaskId: String?
     @State private var selectedGroup: TaskGroup = .all
 
-    // 布局状态
-    @State private var sidebarWidth: CGFloat = 220
-    @State private var listWidth: CGFloat = 320
-    @State private var isSidebarCollapsed: Bool = false
+    // 布局状态 - 使用 @AppStorage 持久化列宽
+    @AppStorage("sidebarWidth") private var sidebarWidth: Double = 220
+    @AppStorage("listWidth") private var listWidth: Double = 320
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
-
-    // 拖拽状态
-    @State private var sidebarDragOffset: CGFloat = 0
-    @State private var listDragOffset: CGFloat = 0
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             // 左侧分组侧边栏
             groupSidebar
                 .navigationTitle("")
+                .navigationSplitViewColumnWidth(min: 150, ideal: sidebarWidth, max: 400)
         } content: {
             // 中间任务列表
             taskList
                 .navigationTitle("")
+                .navigationSplitViewColumnWidth(min: 250, ideal: listWidth, max: 500)
         } detail: {
             // 右侧详情
             detailView
@@ -74,7 +70,6 @@ struct HistoryView: View {
         .navigationSplitViewStyle(.balanced)
         .ignoresSafeArea()
         .onAppear {
-            loadLayoutConfig()
             reload()
         }
         .onChange(of: taskManager.runningTasks.count) { reload() }
@@ -98,15 +93,6 @@ struct HistoryView: View {
                     }
                 }
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .saveLayoutConfig)) { _ in
-            saveLayoutConfig()
-        }
-        .onChange(of: columnVisibility) { _, _ in
-            saveLayoutConfig()
-        }
-        .onDisappear {
-            saveLayoutConfig()
         }
     }
 
@@ -224,22 +210,6 @@ struct HistoryView: View {
     }
 
     // MARK: - 辅助方法
-
-    private func loadLayoutConfig() {
-        let defaults = UserDefaults.standard
-        sidebarWidth = CGFloat(defaults.double(forKey: "sidebarWidth"))
-        if sidebarWidth < 180 { sidebarWidth = 220 }
-        listWidth = CGFloat(defaults.double(forKey: "listWidth"))
-        if listWidth < 280 { listWidth = 320 }
-        columnVisibility = defaults.bool(forKey: "isSidebarCollapsed") ? .detailOnly : .all
-    }
-
-    private func saveLayoutConfig() {
-        let defaults = UserDefaults.standard
-        defaults.set(sidebarWidth, forKey: "sidebarWidth")
-        defaults.set(listWidth, forKey: "listWidth")
-        defaults.set(columnVisibility != .all, forKey: "isSidebarCollapsed")
-    }
 
     private func countForGroup(_ group: TaskGroup) -> Int {
         switch group {
