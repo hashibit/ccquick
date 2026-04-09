@@ -331,9 +331,7 @@ class StatusItemController {
     func showResult(for taskId: String) {
         taskManager.markViewed(taskId: taskId)
         updateIcon()
-        // 直接打开独立任务详情窗口
-        let controller = TaskDetailWindowController(taskId: taskId)
-        controller.show()
+        TaskDetailWindowController.showOrCreate(taskId: taskId)
     }
 
     @objc private func showHistory() {

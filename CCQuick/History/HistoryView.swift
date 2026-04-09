@@ -157,8 +157,7 @@ struct HistoryView: View {
 
     /// 双击打开任务详情独立窗口
     private func openTaskDetailWindow(taskId: String) {
-        let controller = TaskDetailWindowController(taskId: taskId)
-        controller.show()
+        TaskDetailWindowController.showOrCreate(taskId: taskId)
     }
 
     private func deleteTasks(at offsets: IndexSet) {
@@ -329,6 +328,7 @@ struct TaskDetailView: View {
     let taskId: String
     @State private var task: CCTask?
     @State private var followUpText = ""
+    @State private var pendingFollowUpText = ""
     @ObservationIgnored @Bindable private var taskManager = TaskManager.shared
 
     var body: some View {
@@ -348,6 +348,9 @@ struct TaskDetailView: View {
         .onChange(of: taskId) { refresh() }
         .onChange(of: taskManager.runningTasks) { refresh() }
         .onChange(of: taskManager.unviewedTasks) { refresh() }
+        .onChange(of: task?.status) { _, newStatus in
+            if newStatus != .running { pendingFollowUpText = "" }
+        }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
             if task?.status == .running { refresh() }
         }
@@ -368,6 +371,13 @@ struct TaskDetailView: View {
                 if let lastFollowUp = extractFollowUps(from: newValue).last {
                     withAnimation(.easeOut(duration: 0.2)) {
                         proxy.scrollTo(lastFollowUp.id, anchor: .bottom)
+                    }
+                }
+            }
+            .onChange(of: pendingFollowUpText) { _, newValue in
+                if !newValue.isEmpty {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        proxy.scrollTo("pending-followup", anchor: .bottom)
                     }
                 }
             }
@@ -403,11 +413,24 @@ struct TaskDetailView: View {
                     time: nil,
                     isStreaming: task.status == .running && followUp.isLast
                 )
+            } else if task.status == .running && followUp.isLast {
+                // 追问问题已写入但 AI 尚未开始回答
+                ChatBubble(role: .assistant, content: "", time: nil, isStreaming: true)
             }
         }
 
         // 正在运行但还没有回复
         if task.status == .running && task.response.isEmpty {
+            ChatBubble(role: .assistant, content: "", time: nil, isStreaming: true)
+        }
+
+        // 刚提交追问，TaskRunner 尚未将其写入 response
+        let lastFollowUpQuestion = followUps.last?.question
+        if task.status == .running
+            && !pendingFollowUpText.isEmpty
+            && lastFollowUpQuestion != pendingFollowUpText {
+            ChatBubble(role: .user, content: pendingFollowUpText, time: nil)
+                .id("pending-followup")
             ChatBubble(role: .assistant, content: "", time: nil, isStreaming: true)
         }
     }
@@ -533,7 +556,7 @@ struct TaskDetailView: View {
         let text = followUpText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
-        // 使用 followUp 方法在当前任务会话中继续对话，不创建新历史
+        pendingFollowUpText = text
         TaskManager.shared.followUp(task: t, followUpPrompt: text)
         followUpText = ""
     }

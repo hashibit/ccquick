@@ -31,6 +31,22 @@ class HistoryWindowController {
 class TaskDetailWindowController: NSWindowController {
     private let taskId: String
 
+    /// 复用已打开的同一任务窗口，若无则创建新窗口
+    static func showOrCreate(taskId: String) {
+        let autosaveName = "TaskDetailWindow-\(taskId)"
+        if let existing = NSApp.windows.first(where: {
+            $0.frameAutosaveName == autosaveName && ($0.isVisible || $0.isMiniaturized)
+        }) {
+            existing.deminiaturize(nil)
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.setActivationPolicy(.regular)
+            return
+        }
+        let controller = TaskDetailWindowController(taskId: taskId)
+        controller.show()
+    }
+
     init(taskId: String) {
         self.taskId = taskId
 

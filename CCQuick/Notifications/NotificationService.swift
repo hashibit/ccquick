@@ -10,9 +10,14 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
 
     func notify(task: CCTask) {
         let content = UNMutableNotificationContent()
-        // 问题作为 title，答案作为 body，不设置 subtitle
-        content.title = task.shortPrompt
-        content.body = shortResponse(task.response)
+        // 如果有追问，用最后一轮追问的问题和回答；否则用原始问题和回答
+        if let (lastQuestion, lastAnswer) = extractLastFollowUp(from: task.response) {
+            content.title = String(lastQuestion.prefix(80))
+            content.body = shortResponse(lastAnswer)
+        } else {
+            content.title = task.shortPrompt
+            content.body = shortResponse(task.response)
+        }
         content.sound = .default
         content.userInfo = ["taskId": task.id]
 
@@ -22,6 +27,21 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
             trigger: nil
         )
         UNUserNotificationCenter.current().add(request)
+    }
+
+    /// 提取 response 中最后一轮追问的问题和回答
+    private func extractLastFollowUp(from response: String) -> (question: String, answer: String)? {
+        let separator = "\n\n---\n\n### 追问："
+        guard let lastSepRange = response.range(of: separator, options: .backwards) else { return nil }
+
+        let afterSep = String(response[lastSepRange.upperBound...])
+        guard let questionEndRange = afterSep.range(of: "\n\n") else {
+            // 只有问题，尚无回答
+            return (afterSep.trimmingCharacters(in: .whitespacesAndNewlines), "")
+        }
+        let question = String(afterSep[..<questionEndRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+        let answer = String(afterSep[questionEndRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return (question, answer)
     }
 
     /// 截取答案的前 120 字符，去掉 Markdown 格式标记
