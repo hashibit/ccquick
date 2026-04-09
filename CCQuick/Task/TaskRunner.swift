@@ -195,6 +195,18 @@ class TaskRunner {
 
         process.environment = env
 
+        // 记录 AI 调用详情
+        let modelInfo = env["ANTHROPIC_MODEL"] ?? "默认"
+        let baseUrlInfo = env["ANTHROPIC_BASE_URL"] ?? "默认"
+        logAI("""
+        🖥️ Claude CLI Session (带计划执行)
+        - Claude Path: \(claudePath)
+        - 执行账户: \(settings.executionAccount.displayName)
+        - Model: \(modelInfo)
+        - Base URL: \(baseUrlInfo)
+        - Arguments: \(process.arguments ?? [])
+        """, category: "CLI")
+
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
@@ -280,6 +292,18 @@ class TaskRunner {
         // 默认 Claude 订阅：不设置额外环境变量，使用 CLI 默认配置
 
         process.environment = env
+
+        // 记录 AI 调用详情
+        let modelInfo = env["ANTHROPIC_MODEL"] ?? "默认"
+        let baseUrlInfo = env["ANTHROPIC_BASE_URL"] ?? "默认"
+        logAI("""
+        🖥️ Claude CLI Session
+        - Claude Path: \(claudePath)
+        - 执行账户: \(settings.executionAccount.displayName)
+        - Model: \(modelInfo)
+        - Base URL: \(baseUrlInfo)
+        - Arguments: \(process.arguments ?? [])
+        """, category: "CLI")
 
         let pipe = Pipe()
         process.standardOutput = pipe
@@ -379,6 +403,18 @@ class TaskRunner {
         }
 
         process.environment = env
+
+        // 记录 AI 调用详情
+        let modelInfo = env["ANTHROPIC_MODEL"] ?? "默认"
+        let baseUrlInfo = env["ANTHROPIC_BASE_URL"] ?? "默认"
+        logAI("""
+        🖥️ Claude CLI Session (追问)
+        - Claude Path: \(claudePath)
+        - 执行账户: \(settings.executionAccount.displayName)
+        - Model: \(modelInfo)
+        - Base URL: \(baseUrlInfo)
+        - Arguments: \(process.arguments ?? [])
+        """, category: "CLI")
 
         let pipe = Pipe()
         process.standardOutput = pipe

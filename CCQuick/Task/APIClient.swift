@@ -77,7 +77,15 @@ class APIClient {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 30
 
-        logDebug("第一阶段请求: \(provider.name) / \(provider.haikuModel)", category: "API")
+        // 记录 AI 调用详情
+        logAI("""
+        📡 HTTP 直接请求
+        - Provider: \(provider.name)
+        - URL: \(url.absoluteString)
+        - Model: \(provider.haikuModel)
+        - API Type: \(provider.apiType.rawValue)
+        - Auth Type: \(provider.authType.rawValue)
+        """, category: "API")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 

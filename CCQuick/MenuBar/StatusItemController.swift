@@ -118,6 +118,7 @@ struct LogView: View {
         case .debug: return .secondary
         case .info: return .blue
         case .tool: return .purple
+        case .ai: return .cyan
         case .warning: return .orange
         case .error: return .red
         }

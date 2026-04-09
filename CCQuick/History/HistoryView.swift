@@ -596,6 +596,12 @@ struct ChatBubble: View {
                 // 消息内容
                 messageContent
 
+                // 消息工具栏（仅在非流式且内容不为空时显示）
+                if !isStreaming && !content.isEmpty {
+                    MessageToolbar(role: role, content: content)
+                        .frame(maxWidth: .infinity, alignment: role == .user ? .trailing : .leading)
+                }
+
                 // 时间戳
                 if let time = time, !isStreaming {
                     Text(time.formatted(date: .omitted, time: .shortened))
@@ -632,7 +638,6 @@ struct ChatBubble: View {
             VStack(alignment: .leading, spacing: 4) {
                 Markdown(content)
                     .markdownTheme(.gitHub.text { FontFamily(.system()); FontSize(NSFont.systemFontSize) })
-                    .textSelection(.enabled)
 
                 HStack(spacing: 4) {
                     TypingIndicator()
@@ -648,11 +653,13 @@ struct ChatBubble: View {
                 Text(content)
                     .font(.body)
                     .foregroundStyle(.white)
+                    .textSelection(.enabled)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .background(Color.accentColor.opacity(0.8))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             } else {
+                // AI 消息：MarkdownUI 渲染
                 Markdown(content)
                     .markdownTheme(.gitHub.text { FontFamily(.system()); FontSize(NSFont.systemFontSize) })
                     .textSelection(.enabled)
@@ -769,6 +776,46 @@ struct TypingIndicator: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - 消息工具栏
+
+struct MessageToolbar: View {
+    let role: ChatRole
+    let content: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // 复制原文按钮
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(content, forType: .string)
+            } label: {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 11))
+            }
+            .buttonStyle(.plain)
+            .controlSize(.mini)
+            .help("复制原文")
+
+            // 复制 Markdown 按钮
+            if !content.isEmpty {
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(content, forType: .string)
+                } label: {
+                    Image(systemName: "markdown")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(.plain)
+                .controlSize(.mini)
+                .help("复制 Markdown")
+            }
+        }
+        .foregroundStyle(.tertiary)
+        .opacity(0.6)
+        .padding(.top, 4)
     }
 }
 
