@@ -598,7 +598,7 @@ struct ChatBubble: View {
 
                 // 消息工具栏（仅在非流式且内容不为空时显示）
                 if !isStreaming && !content.isEmpty {
-                    MessageToolbar(role: role, content: content)
+                    MessageToolbar(content: content)
                         .frame(maxWidth: .infinity, alignment: role == .user ? .trailing : .leading)
                 }
 
@@ -782,40 +782,153 @@ struct TypingIndicator: View {
 // MARK: - 消息工具栏
 
 struct MessageToolbar: View {
-    let role: ChatRole
     let content: String
 
-    var body: some View {
-        HStack(spacing: 8) {
-            // 复制原文按钮
-            Button {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(content, forType: .string)
-            } label: {
-                Image(systemName: "doc.on.doc")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.plain)
-            .controlSize(.mini)
-            .help("复制原文")
+    @State private var isHoveringCopy = false
+    @State private var isHoveringMarkdown = false
 
-            // 复制 Markdown 按钮
+    var body: some View {
+        HStack(spacing: 6) {
+            // 复制原文按钮（纯文本，去掉 Markdown 格式）
+            toolbarButton(
+                icon: "doc.on.doc",
+                tooltip: "复制原文",
+                isHovering: isHoveringCopy
+            ) {
+                isHoveringCopy = true
+                let plainText = stripMarkdown(content)
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(plainText, forType: .string)
+            }
+            .onHover { hovering in
+                isHoveringCopy = hovering
+            }
+
+            // 复制 Markdown 按钮（原始 Markdown 源码）
             if !content.isEmpty {
-                Button {
+                toolbarButton(
+                    icon: "chevron.left.forwardslash.chevron.right",
+                    tooltip: "复制 Markdown",
+                    isHovering: isHoveringMarkdown
+                ) {
+                    isHoveringMarkdown = true
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(content, forType: .string)
-                } label: {
-                    Image(systemName: "markdown")
-                        .font(.system(size: 11))
                 }
-                .buttonStyle(.plain)
-                .controlSize(.mini)
-                .help("复制 Markdown")
+                .onHover { hovering in
+                    isHoveringMarkdown = hovering
+                }
             }
         }
-        .foregroundStyle(.tertiary)
-        .opacity(0.6)
-        .padding(.top, 4)
+        .padding(.top, 6)
+    }
+
+    private func toolbarButton(icon: String, tooltip: String, isHovering: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .medium))
+                .frame(width: 24, height: 20)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(isHovering ? Color.secondary.opacity(0.3) : Color.secondary.opacity(0.15))
+                )
+                .foregroundStyle(isHovering ? .primary : .secondary)
+        }
+        .buttonStyle(.plain)
+        .help(tooltip)
+    }
+
+    /// 去掉 Markdown 格式，提取纯文本
+    private func stripMarkdown(_ markdown: String) -> String {
+        var lines = markdown.components(separatedBy: "\n")
+
+        var result: [String] = []
+        var inCodeBlock = false
+
+        for line in lines {
+            // 检测代码块
+            if line.hasPrefix("```") {
+                inCodeBlock.toggle()
+                continue
+            }
+
+            // 跳过代码块内的内容
+            if inCodeBlock {
+                continue
+            }
+
+            var processedLine = line
+
+            // 去掉标题标记 # ## ### 等
+            while processedLine.hasPrefix("#") {
+                processedLine = String(processedLine.dropFirst())
+            }
+            processedLine = processedLine.trimmingCharacters(in: .whitespaces)
+
+            // 去掉列表标记 - * +
+            if processedLine.hasPrefix("- ") {
+                processedLine = String(processedLine.dropFirst(2))
+            } else if processedLine.hasPrefix("* ") {
+                processedLine = String(processedLine.dropFirst(2))
+            } else if processedLine.hasPrefix("+ ") {
+                processedLine = String(processedLine.dropFirst(2))
+            }
+
+            // 去掉有序列表 1. 2. 等
+            let orderedListPattern = "^\\d+\\.\\s+"
+            if let range = processedLine.range(of: orderedListPattern, options: .regularExpression) {
+                processedLine.removeSubrange(range)
+            }
+
+            // 去掉引用标记 >
+            if processedLine.hasPrefix("> ") {
+                processedLine = String(processedLine.dropFirst(2))
+            }
+
+            // 去掉水平线 --- *** ___
+            let stripped = processedLine.trimmingCharacters(in: .whitespaces)
+            if stripped == "---" || stripped == "***" || stripped == "___" {
+                continue
+            }
+
+            // 跳过表格分隔行 |---|---|
+            if stripped.contains("|") && stripped.contains("-") && !stripped.contains(where: { !$0.isWhitespace && $0 != "|" && $0 != "-" }) {
+                continue
+            }
+
+            // 去掉表格的管道符，保留内容
+            if processedLine.contains("|") {
+                let cells = processedLine.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+                processedLine = cells.joined(separator: " | ")
+            }
+
+            // 去掉行内代码 `...`
+            processedLine = processedLine.replacingOccurrences(of: "`([^`]+)`", with: "$1", options: .regularExpression)
+
+            // 去掉链接 [text](url) → text
+            processedLine = processedLine.replacingOccurrences(of: "\\[([^\\]]+)\\]\\([^)]+\\)", with: "$1", options: .regularExpression)
+
+            // 去掉图片 ![alt](url)
+            processedLine = processedLine.replacingOccurrences(of: "!\\[[^\\]]*\\]\\([^)]+\\)", with: "", options: .regularExpression)
+
+            // 去掉粗体 **text** 或 __text__
+            processedLine = processedLine.replacingOccurrences(of: "\\*\\*([^*]+)\\*\\*", with: "$1", options: .regularExpression)
+            processedLine = processedLine.replacingOccurrences(of: "__([^_]+)__", with: "$1", options: .regularExpression)
+
+            // 去掉斜体 *text* 或 _text_
+            processedLine = processedLine.replacingOccurrences(of: "\\*([^*]+)\\*", with: "$1", options: .regularExpression)
+            processedLine = processedLine.replacingOccurrences(of: "_([^_]+)_", with: "$1", options: .regularExpression)
+
+            // 去掉删除线 ~~text~~
+            processedLine = processedLine.replacingOccurrences(of: "~~([^~]+)~~", with: "$1", options: .regularExpression)
+
+            result.append(processedLine)
+        }
+
+        // 移除多余空行
+        let finalText = result.joined(separator: "\n")
+        // 将连续多个空行压缩为一个
+        return finalText.replacingOccurrences(of: "\n{3,}", with: "\n\n", options: .regularExpression)
     }
 }
 
