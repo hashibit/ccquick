@@ -1,41 +1,6 @@
 import SwiftUI
 import MarkdownUI
 
-extension Notification.Name {
-    static let openHistoryWindow = Notification.Name("openHistoryWindow")
-    static let selectHistoryTask = Notification.Name("selectHistoryTask")
-    static let deleteSelectedHistoryTask = Notification.Name("deleteSelectedHistoryTask")
-}
-
-// MARK: - 分组枚举
-
-enum TaskGroup: String, CaseIterable, Identifiable {
-    case all = "全部"
-    case running = "运行中"
-    case completed = "已完成"
-    case failed = "失败"
-
-    var id: String { rawValue }
-
-    var icon: String {
-        switch self {
-        case .all: return "tray.full.fill"
-        case .running: return "arrow.clockwise"
-        case .completed: return "checkmark.circle.fill"
-        case .failed: return "xmark.circle.fill"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .all: return .accentColor
-        case .running: return .blue
-        case .completed: return .green
-        case .failed: return .red
-        }
-    }
-}
-
 // MARK: - 主视图
 
 struct HistoryView: View {
@@ -160,13 +125,6 @@ struct HistoryView: View {
         TaskDetailWindowController.showOrCreate(taskId: taskId)
     }
 
-    private func deleteTasks(at offsets: IndexSet) {
-        for index in offsets {
-            let task = filteredTasks[index]
-            deleteTask(id: task.id)
-        }
-    }
-
     private func deleteTask(id: String) {
         // 从磁盘删除
         TaskStore.shared.delete(id: id)
@@ -288,8 +246,8 @@ struct TaskDetailView: View {
         .background(Color(NSColor.textBackgroundColor))
         .onAppear { refresh() }
         .onChange(of: taskId) { refresh() }
-        .onChange(of: taskManager.runningTasks) { refresh() }
-        .onChange(of: taskManager.unviewedTasks) { refresh() }
+        .onChange(of: taskManager.runningTasks.count) { refresh() }
+        .onChange(of: taskManager.unviewedTasks.count) { refresh() }
         .onChange(of: task?.status) { _, newStatus in
             if newStatus != .running { pendingFollowUpText = "" }
         }
@@ -416,11 +374,6 @@ struct TaskDetailView: View {
 
 // MARK: - 聊天气泡
 
-enum ChatRole {
-    case user
-    case assistant
-}
-
 struct ChatBubble: View {
     let role: ChatRole
     let content: String
@@ -466,41 +419,22 @@ struct ChatBubble: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(role == .user ? Color.accentColor.opacity(0.8) : Color(NSColor.controlBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .bubbleBackground(for: role, accent: true)
         } else if isStreaming {
-            VStack(alignment: .leading, spacing: 4) {
-                Markdown(content)
-                    .markdownTheme(.gitHub.text { FontFamily(.system()); FontSize(NSFont.systemFontSize) })
-
-                HStack(spacing: 4) {
-                    TypingIndicator()
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color(NSColor.controlBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            Markdown(content).markdownTheme(MarkdownTheme.gitHub)
+                .overlay(alignment: .bottomLeading) { TypingIndicator() }
+                .bubbleBackground(for: role)
         } else if !content.isEmpty {
             if role == .user {
                 Text(content)
                     .font(.body)
                     .foregroundStyle(.white)
                     .textSelection(.enabled)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.accentColor.opacity(0.8))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .bubbleBackground(for: role, accent: true)
             } else {
-                Markdown(content)
-                    .markdownTheme(.gitHub.text { FontFamily(.system()); FontSize(NSFont.systemFontSize) })
+                Markdown(content).markdownTheme(MarkdownTheme.gitHub)
                     .textSelection(.enabled)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .bubbleBackground(for: role)
             }
         }
     }
@@ -559,178 +493,6 @@ struct TaskToolbarContent: ToolbarContent {
 
     private var currentTask: CCTask? {
         taskManager.runningTasks.first { $0.id == taskId } ?? TaskStore.shared.load(id: taskId)
-    }
-}
-
-struct TaskStatusLabel: View {
-    let task: CCTask
-
-    var body: some View {
-        let config = statusConfig()
-        Label(config.text, systemImage: config.icon)
-            .font(.caption.weight(.medium))
-            .foregroundStyle(config.color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(config.color.opacity(0.1))
-            .clipShape(Capsule())
-    }
-
-    private func statusConfig() -> (text: String, icon: String, color: Color) {
-        switch task.status {
-        case .completed: return ("已完成", "checkmark.circle.fill", .green)
-        case .failed: return ("失败", "xmark.circle.fill", .red)
-        case .running: return ("运行中", "arrow.clockwise", .blue)
-        }
-    }
-}
-
-// MARK: - 打字动画指示器
-
-struct TypingIndicator: View {
-    @State private var animationPhase = 0
-
-    var body: some View {
-        HStack(spacing: 3) {
-            ForEach(0..<3, id: \.self) { index in
-                Circle()
-                    .fill(Color.secondary)
-                    .frame(width: 4, height: 4)
-                    .scaleEffect(animationPhase == index ? 1.2 : 0.8)
-                    .opacity(animationPhase == index ? 1 : 0.5)
-            }
-        }
-        .onAppear {
-            withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
-                animationPhase = 1
-            }
-            Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { _ in
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    animationPhase = (animationPhase + 1) % 3
-                }
-            }
-        }
-    }
-}
-
-// MARK: - 消息工具栏
-
-struct MessageToolbar: View {
-    let content: String
-
-    @State private var isHoveringCopy = false
-    @State private var isHoveringMarkdown = false
-
-    var body: some View {
-        HStack(spacing: 6) {
-            toolbarButton(
-                icon: "doc.on.doc",
-                tooltip: "复制原文",
-                isHovering: isHoveringCopy
-            ) {
-                isHoveringCopy = true
-                let plainText = stripMarkdown(content)
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(plainText, forType: .string)
-            }
-            .onHover { hovering in
-                isHoveringCopy = hovering
-            }
-
-            if !content.isEmpty {
-                toolbarButton(
-                    icon: "chevron.left.forwardslash.chevron.right",
-                    tooltip: "复制 Markdown",
-                    isHovering: isHoveringMarkdown
-                ) {
-                    isHoveringMarkdown = true
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(content, forType: .string)
-                }
-                .onHover { hovering in
-                    isHoveringMarkdown = hovering
-                }
-            }
-        }
-        .padding(.top, 6)
-    }
-
-    private func toolbarButton(icon: String, tooltip: String, isHovering: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .medium))
-                .frame(width: 24, height: 20)
-                .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(isHovering ? Color.secondary.opacity(0.3) : Color.secondary.opacity(0.15))
-                )
-                .foregroundStyle(isHovering ? .primary : .secondary)
-        }
-        .buttonStyle(.plain)
-        .help(tooltip)
-    }
-
-    private func stripMarkdown(_ markdown: String) -> String {
-        var lines = markdown.components(separatedBy: "\n")
-        var result: [String] = []
-        var inCodeBlock = false
-
-        for line in lines {
-            if line.hasPrefix("```") {
-                inCodeBlock.toggle()
-                continue
-            }
-            if inCodeBlock { continue }
-
-            var processedLine = line
-            while processedLine.hasPrefix("#") {
-                processedLine = String(processedLine.dropFirst())
-            }
-            processedLine = processedLine.trimmingCharacters(in: .whitespaces)
-
-            if processedLine.hasPrefix("- ") {
-                processedLine = String(processedLine.dropFirst(2))
-            } else if processedLine.hasPrefix("* ") {
-                processedLine = String(processedLine.dropFirst(2))
-            } else if processedLine.hasPrefix("+ ") {
-                processedLine = String(processedLine.dropFirst(2))
-            }
-
-            let orderedListPattern = "^\\d+\\.\\s+"
-            if let range = processedLine.range(of: orderedListPattern, options: .regularExpression) {
-                processedLine.removeSubrange(range)
-            }
-
-            if processedLine.hasPrefix("> ") {
-                processedLine = String(processedLine.dropFirst(2))
-            }
-
-            let stripped = processedLine.trimmingCharacters(in: .whitespaces)
-            if stripped == "---" || stripped == "***" || stripped == "___" { continue }
-
-            if stripped.contains("|") && stripped.contains("-") && !stripped.contains(where: { !$0.isWhitespace && $0 != "|" && $0 != "-" }) {
-                continue
-            }
-
-            if processedLine.contains("|") {
-                let cells = processedLine.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-                processedLine = cells.joined(separator: " | ")
-            }
-
-            processedLine = processedLine.replacingOccurrences(of: "`([^`]+)`", with: "$1", options: .regularExpression)
-            processedLine = processedLine.replacingOccurrences(of: "\\[([^\\]]+)\\]\\([^)]+\\)", with: "$1", options: .regularExpression)
-            processedLine = processedLine.replacingOccurrences(of: "!\\[[^\\]]*\\]\\([^)]+\\)", with: "", options: .regularExpression)
-            processedLine = processedLine.replacingOccurrences(of: "\\*\\*([^*]+)\\*\\*", with: "$1", options: .regularExpression)
-            processedLine = processedLine.replacingOccurrences(of: "__([^_]+)__", with: "$1", options: .regularExpression)
-            processedLine = processedLine.replacingOccurrences(of: "\\*([^*]+)\\*", with: "$1", options: .regularExpression)
-            processedLine = processedLine.replacingOccurrences(of: "_([^_]+)_", with: "$1", options: .regularExpression)
-            processedLine = processedLine.replacingOccurrences(of: "~~([^~]+)~~", with: "$1", options: .regularExpression)
-
-            result.append(processedLine)
-        }
-
-        let finalText = result.joined(separator: "\n")
-        return finalText.replacingOccurrences(of: "\n{3,}", with: "\n\n", options: .regularExpression)
     }
 }
 
