@@ -241,7 +241,7 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
             }
 
             if let titleField = cell?.viewWithIdentifier("Title") as? NSTextField {
-                titleField.stringValue = task.shortPrompt
+                titleField.stringValue = TaskStore.shared.getShortPrompt(id: task.id)
                 titleField.font = NSFont.preferredFont(forTextStyle: .body)
                 titleField.textColor = NSColor.labelColor
             }
@@ -252,7 +252,8 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
                     previewField.font = NSFont.preferredFont(forTextStyle: .caption1)
                     previewField.textColor = NSColor.systemBlue
                 } else {
-                    let preview = String(task.response.prefix(60)).replacingOccurrences(of: "\n", with: " ")
+                    let lastResponse = TaskStore.shared.getLastResponse(id: task.id) ?? ""
+                    let preview = String(lastResponse.prefix(60)).replacingOccurrences(of: "\n", with: " ")
                     previewField.stringValue = preview.isEmpty ? "无内容" : preview
                     previewField.font = NSFont.preferredFont(forTextStyle: .caption1)
                     previewField.textColor = NSColor.secondaryLabelColor

@@ -264,8 +264,9 @@ class StatusItemController {
             menu.addItem(header)
 
             for task in running {
+                let shortPrompt = TaskStore.shared.getShortPrompt(id: task.id)
                 let item = NSMenuItem(
-                    title: "  \(task.shortPrompt)  [\(task.elapsedString)]",
+                    title: "  \(shortPrompt)  [\(task.elapsedString)]",
                     action: nil,
                     keyEquivalent: ""
                 )
@@ -283,8 +284,9 @@ class StatusItemController {
             menu.addItem(header)
 
             for task in unviewed {
+                let shortPrompt = TaskStore.shared.getShortPrompt(id: task.id)
                 let item = NSMenuItem(
-                    title: "  \(task.shortPrompt)",
+                    title: "  \(shortPrompt)",
                     action: #selector(viewResult(_:)),
                     keyEquivalent: ""
                 )

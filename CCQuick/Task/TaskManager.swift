@@ -36,19 +36,19 @@ class TaskManager {
         let workDirURL = URL(fileURLWithPath: workDir)
         try? FileManager.default.createDirectory(at: workDirURL, withIntermediateDirectories: true)
 
-        // 写入 prompt 文件
-        let promptFile = workDirURL.appendingPathComponent("prompt.txt")
-        try? trimmed.write(to: promptFile, atomically: true, encoding: .utf8)
+        // 写入 user 消息到 session.jsonl
+        try? TaskStore.shared.appendMessage(id: id, message: SessionMessage(
+            type: .user,
+            content: trimmed
+        ))
 
-        // 立即创建 running 状态的任务，让 tray 显示忙碌状态
+        // 创建任务
         let task = CCTask(
             id: id,
-            prompt: trimmed,
             workDir: workDir,
             status: .running,
             startedAt: .now,
             finishedAt: nil,
-            response: "",
             viewed: false
         )
 
@@ -76,7 +76,7 @@ class TaskManager {
         }
 
         // 默认 Claude 订阅：直接执行（无两阶段）
-        executeDirectly(task: task)
+        executeDirectly(task: task, prompt: trimmed)
     }
 
     /// 两阶段执行
@@ -111,32 +111,32 @@ class TaskManager {
                 } else if let plan = response.plan {
                     // 需要计划执行
                     logInfo("需要计划执行: \(plan.prefix(50))...", category: "Task")
-                    await executeWithPlan(task: task, plan: plan)
+                    await executeWithPlan(task: task, plan: plan, userPrompt: prompt)
                 } else {
                     // 异常情况，直接执行
                     logWarning("第一阶段返回无效响应，直接执行", category: "Task")
-                    executeDirectly(task: task)
+                    executeDirectly(task: task, prompt: prompt)
                 }
             } catch {
                 logError("第一阶段失败: \(error.localizedDescription)", category: "Task")
                 // 降级：直接执行
-                executeDirectly(task: task)
+                executeDirectly(task: task, prompt: prompt)
             }
         }
     }
 
     /// 处理快速回答
     private func handleQuickAnswer(task: CCTask, answer: String) async {
-        // 写入响应文件
-        let workDirURL = URL(fileURLWithPath: task.workDir)
-        let responseFile = workDirURL.appendingPathComponent("response.txt")
-        try? answer.write(to: responseFile, atomically: true, encoding: .utf8)
+        // 写入 assistant 消息到 session.jsonl
+        try? TaskStore.shared.appendMessage(id: task.id, message: SessionMessage(
+            type: .assistant,
+            content: answer
+        ))
 
         // 更新任务状态
         var completedTask = task
         completedTask.status = .completed
         completedTask.finishedAt = .now
-        completedTask.response = answer
         completedTask.viewed = false
 
         // 从 runningTasks 移除，添加到未查看列表
@@ -152,11 +152,11 @@ class TaskManager {
 
         // 通知
         onTaskCompleted?(completedTask)
-        NotificationService.shared.notify(task: completedTask)
+        NotificationService.shared.notify(task: completedTask, response: answer)
     }
 
     /// 带计划执行
-    private func executeWithPlan(task: CCTask, plan: String) async {
+    private func executeWithPlan(task: CCTask, plan: String, userPrompt: String) async {
         // 保存任务
         do {
             try TaskStore.shared.save(task)
@@ -165,7 +165,7 @@ class TaskManager {
         }
 
         logInfo("启动 TaskRunner.runWithPlan...", category: "Task")
-        TaskRunner.runWithPlan(task: task, plan: plan, onOutput: { output in
+        TaskRunner.runWithPlan(task: task, plan: plan, userPrompt: userPrompt, onOutput: { output in
             logDebug("任务输出: \(output.prefix(100))", category: "Task")
         }, onComplete: { [weak self] completed in
             guard let self = self else { return }
@@ -184,7 +184,7 @@ class TaskManager {
     }
 
     /// 直接执行（无两阶段）
-    private func executeDirectly(task: CCTask) {
+    private func executeDirectly(task: CCTask, prompt: String) {
         // 保存任务
         do {
             try TaskStore.shared.save(task)
@@ -194,7 +194,7 @@ class TaskManager {
         }
 
         logInfo("启动 TaskRunner...", category: "Task")
-        TaskRunner.run(task: task, onOutput: { output in
+        TaskRunner.run(task: task, prompt: prompt, onOutput: { output in
             logDebug("任务输出: \(output.prefix(100))", category: "Task")
         }, onComplete: { [weak self] completed in
             guard let self = self else { return }
@@ -232,6 +232,12 @@ class TaskManager {
 
         logInfo("追问任务: \(task.id), 内容: \(followUpPrompt.prefix(50))...", category: "Task")
 
+        // 写入 user 消息到 session.jsonl
+        try? TaskStore.shared.appendMessage(id: task.id, message: SessionMessage(
+            type: .user,
+            content: followUpPrompt
+        ))
+
         // 将任务重新加入 runningTasks
         var runningTask = task
         runningTask.status = .running
@@ -245,36 +251,22 @@ class TaskManager {
             logError("保存任务失败: \(error)", category: "Task")
         }
 
-        // 构建追问的 prompt（包含历史上下文）
-        let contextPrompt = """
-        【历史对话】
-        原始需求：\(task.prompt)
-
-        之前的回复：
-        \(task.response)
-
-        ---
-        【追问】\(followUpPrompt)
-
-        请继续回答，注意保持上下文连贯。
-        """
+        // 从 session.jsonl 读取历史消息，构建上下文 prompt
+        let messages = TaskStore.shared.loadMessages(id: task.id)
+        let contextPrompt = buildContextPrompt(messages: messages, followUpPrompt: followUpPrompt)
 
         // 执行追问
         TaskRunner.runFollowUp(
             task: runningTask,
-            originalPrompt: task.prompt,
-            originalResponse: task.response,
             followUpPrompt: followUpPrompt,
+            contextPrompt: contextPrompt,
             onOutput: { output in
                 logDebug("追问输出: \(output.prefix(100))", category: "Task")
             },
             onComplete: { [weak self] completed in
                 guard let self = self else { return }
                 logInfo("追问完成: \(completed.id)", category: "Task")
-                // 更新任务状态
                 self.runningTasks.removeAll { $0.id == completed.id }
-                // 不添加到 unviewedTasks，因为这是同一个任务的延续
-                // 直接更新磁盘上的任务
                 do {
                     try TaskStore.shared.save(completed)
                 } catch {
@@ -283,6 +275,24 @@ class TaskManager {
                 self.onTaskCompleted?(completed)
             }
         )
+    }
+
+    /// 构建追问的上下文 prompt
+    private func buildContextPrompt(messages: [SessionMessage], followUpPrompt: String) -> String {
+        var historyText = ""
+        for msg in messages where msg.type == .user || msg.type == .assistant {
+            let role = msg.type == .user ? "用户" : "AI"
+            historyText += "【\(role)】\n\(msg.content)\n\n"
+        }
+
+        return """
+        【历史对话】
+        \(historyText)
+        ---
+        【追问】\(followUpPrompt)
+
+        请继续回答，注意保持上下文连贯。
+        """
     }
 
     var unviewedCount: Int { unviewedTasks.count }

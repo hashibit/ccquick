@@ -8,16 +8,30 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
 
     private override init() {}
 
-    func notify(task: CCTask) {
+    func notify(task: CCTask, response: String? = nil) {
         let content = UNMutableNotificationContent()
-        // 如果有追问，用最后一轮追问的问题和回答；否则用原始问题和回答
-        if let (lastQuestion, lastAnswer) = extractLastFollowUp(from: task.response) {
-            content.title = String(lastQuestion.prefix(80))
-            content.body = shortResponse(lastAnswer)
+
+        // 从 session.jsonl 读取消息
+        let messages = TaskStore.shared.loadMessages(id: task.id)
+
+        // 找到最后一条 user 消息和 assistant 消息
+        let lastUserMsg = messages.last(where: { $0.type == .user })
+        let lastAssistantMsg = messages.last(where: { $0.type == .assistant })
+
+        if let userMsg = lastUserMsg {
+            content.title = String(userMsg.content.prefix(80))
         } else {
-            content.title = task.shortPrompt
-            content.body = shortResponse(task.response)
+            content.title = "任务完成"
         }
+
+        if let assistantMsg = lastAssistantMsg {
+            content.body = shortResponse(assistantMsg.content)
+        } else if let resp = response {
+            content.body = shortResponse(resp)
+        } else {
+            content.body = "任务已完成"
+        }
+
         content.sound = .default
         content.userInfo = ["taskId": task.id]
 
@@ -29,25 +43,9 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         UNUserNotificationCenter.current().add(request)
     }
 
-    /// 提取 response 中最后一轮追问的问题和回答
-    private func extractLastFollowUp(from response: String) -> (question: String, answer: String)? {
-        let separator = "\n\n---\n\n### 追问："
-        guard let lastSepRange = response.range(of: separator, options: .backwards) else { return nil }
-
-        let afterSep = String(response[lastSepRange.upperBound...])
-        guard let questionEndRange = afterSep.range(of: "\n\n") else {
-            // 只有问题，尚无回答
-            return (afterSep.trimmingCharacters(in: .whitespacesAndNewlines), "")
-        }
-        let question = String(afterSep[..<questionEndRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
-        let answer = String(afterSep[questionEndRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
-        return (question, answer)
-    }
-
     /// 截取答案的前 120 字符，去掉 Markdown 格式标记
     private func shortResponse(_ response: String) -> String {
         let trimmed = response.trimmingCharacters(in: .whitespacesAndNewlines)
-        // 去掉常见 Markdown 格式
         var clean = trimmed
             .replacingOccurrences(of: "**", with: "")
             .replacingOccurrences(of: "__", with: "")
@@ -55,7 +53,7 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
             .replacingOccurrences(of: "#", with: "")
             .replacingOccurrences(of: "`", with: "")
             .replacingOccurrences(of: "```", with: "")
-            .replacingOccurrences(of: "```", with: "")  // 多次确保去掉
+            .replacingOccurrences(of: "```", with: "")
             .replacingOccurrences(of: "---", with: "")
             .replacingOccurrences(of: "- ", with: "• ")
         return clean.count > 120 ? String(clean.prefix(120)) + "…" : clean

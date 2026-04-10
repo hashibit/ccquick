@@ -9,7 +9,7 @@ class ResultWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = task.shortPrompt
+        window.title = TaskStore.shared.getShortPrompt(id: task.id)
         window.center()
 
         let view = ResultView(task: task)
@@ -23,12 +23,20 @@ class ResultWindowController: NSWindowController {
 struct ResultView: View {
     let task: CCTask
 
+    private var prompt: String {
+        TaskStore.shared.getFirstPrompt(id: task.id) ?? "任务"
+    }
+
+    private var response: String {
+        TaskStore.shared.getLastResponse(id: task.id) ?? ""
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // 顶部信息栏
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(task.prompt)
+                    Text(prompt)
                         .font(.headline)
                         .lineLimit(2)
                     HStack(spacing: 8) {
@@ -46,7 +54,7 @@ struct ResultView: View {
                 Spacer()
                 Button {
                     NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(task.response, forType: .string)
+                    NSPasteboard.general.setString(response, forType: .string)
                 } label: {
                     Label("复制", systemImage: "doc.on.doc")
                 }
@@ -60,7 +68,7 @@ struct ResultView: View {
 
             // 响应内容
             ScrollView {
-                Text(task.response.isEmpty ? "（无输出）" : task.response)
+                Text(response.isEmpty ? "（无输出）" : response)
                     .font(.system(.body, design: .monospaced))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)

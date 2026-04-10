@@ -249,76 +249,17 @@ struct HistoryView: View {
         case .failed: result = result.filter { $0.status == .failed }
         }
 
-        // 按搜索文本过滤
+        // 按搜索文本过滤（从 session.jsonl 读取 prompt）
         if !searchText.isEmpty {
-            result = result.filter { $0.prompt.localizedStandardContains(searchText) }
+            result = result.filter { taskId in
+                if let prompt = TaskStore.shared.getFirstPrompt(id: taskId.id) {
+                    return prompt.localizedStandardContains(searchText)
+                }
+                return false
+            }
         }
 
         filteredTasks = result
-    }
-}
-
-// MARK: - 任务行（类似备忘录列表项）
-
-struct TaskRow: View {
-    let task: CCTask
-
-    private var statusColor: Color {
-        switch task.status {
-        case .completed: return .green
-        case .failed: return .red
-        case .running: return .blue
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            // 左侧状态颜色条
-            RoundedRectangle(cornerRadius: 2)
-                .fill(statusColor)
-                .frame(width: 4)
-
-            VStack(alignment: .leading, spacing: 4) {
-                // 标题
-                Text(task.shortPrompt)
-                    .font(.body.weight(.medium))
-                    .lineLimit(1)
-                    .foregroundStyle(.primary)
-
-                // 预览或状态
-                if task.status == .running {
-                    HStack(spacing: 4) {
-                        ProgressView()
-                            .controlSize(.mini)
-                        Text("运行中...")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
-                    }
-                } else if !task.response.isEmpty {
-                    Text(String(task.response.prefix(60)).replacingOccurrences(of: "\n", with: " "))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                // 日期
-                HStack(spacing: 6) {
-                    Text(task.startedAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-
-                    if task.status == .completed {
-                        Text("· \(task.elapsedString)")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-            }
-
-            Spacer()
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
     }
 }
 
@@ -327,6 +268,7 @@ struct TaskRow: View {
 struct TaskDetailView: View {
     let taskId: String
     @State private var task: CCTask?
+    @State private var messages: [SessionMessage] = []
     @State private var followUpText = ""
     @State private var pendingFollowUpText = ""
     @ObservationIgnored @Bindable private var taskManager = TaskManager.shared
@@ -367,10 +309,10 @@ struct TaskDetailView: View {
                 }
                 .padding(16)
             }
-            .onChange(of: task.response) { _, newValue in
-                if let lastFollowUp = extractFollowUps(from: newValue).last {
+            .onChange(of: messages.count) { _, _ in
+                if let lastMsg = messages.last {
                     withAnimation(.easeOut(duration: 0.2)) {
-                        proxy.scrollTo(lastFollowUp.id, anchor: .bottom)
+                        proxy.scrollTo(lastMsg.id, anchor: .bottom)
                     }
                 }
             }
@@ -388,121 +330,29 @@ struct TaskDetailView: View {
 
     @ViewBuilder
     private func chatBubbles(task: CCTask) -> some View {
-        // 用户原始问题
-        ChatBubble(role: .user, content: task.prompt, time: task.startedAt)
-
-        // AI 第一轮回复
-        let firstResponse = extractFirstResponse(from: task.response)
-        if !firstResponse.isEmpty {
+        // 从 session.jsonl 读取的消息
+        ForEach(messages) { msg in
             ChatBubble(
-                role: .assistant,
-                content: firstResponse,
-                time: task.finishedAt,
-                isStreaming: task.status == .running && !hasFollowUps(from: task.response)
+                role: msg.type == .user ? .user : .assistant,
+                content: msg.content,
+                time: msg.timestamp,
+                isStreaming: task.status == .running && msg.id == messages.last?.id && msg.type == .assistant
             )
         }
 
-        // 追问轮次
-        let followUps = extractFollowUps(from: task.response)
-        ForEach(followUps, id: \.id) { followUp in
-            ChatBubble(role: .user, content: followUp.question, time: nil)
-            if !followUp.answer.isEmpty {
-                ChatBubble(
-                    role: .assistant,
-                    content: followUp.answer,
-                    time: nil,
-                    isStreaming: task.status == .running && followUp.isLast
-                )
-            } else if task.status == .running && followUp.isLast {
-                // 追问问题已写入但 AI 尚未开始回答
-                ChatBubble(role: .assistant, content: "", time: nil, isStreaming: true)
-            }
-        }
-
-        // 正在运行但还没有回复
-        if task.status == .running && task.response.isEmpty {
+        // 正在运行但还没有 assistant 消息
+        if task.status == .running && (messages.isEmpty || messages.last?.type == .user) {
             ChatBubble(role: .assistant, content: "", time: nil, isStreaming: true)
         }
 
-        // 刚提交追问，TaskRunner 尚未将其写入 response
-        let lastFollowUpQuestion = followUps.last?.question
+        // 刚提交追问，尚未写入 session.jsonl
         if task.status == .running
             && !pendingFollowUpText.isEmpty
-            && lastFollowUpQuestion != pendingFollowUpText {
+            && messages.last?.content != pendingFollowUpText {
             ChatBubble(role: .user, content: pendingFollowUpText, time: nil)
                 .id("pending-followup")
             ChatBubble(role: .assistant, content: "", time: nil, isStreaming: true)
         }
-    }
-
-    // MARK: - 解析 response
-
-    /// 提取第一轮 AI 回复（追问分隔符之前的内容）
-    private func extractFirstResponse(from response: String) -> String {
-        if let separatorRange = response.range(of: "\n\n---\n\n### 追问：") {
-            return String(response[..<separatorRange.lowerBound])
-        }
-        return response
-    }
-
-    /// 检查是否有追问
-    private func hasFollowUps(from response: String) -> Bool {
-        response.contains("\n\n---\n\n### 追问：")
-    }
-
-    /// 提取追问轮次
-    private func extractFollowUps(from response: String) -> [FollowUpRound] {
-        var rounds: [FollowUpRound] = []
-        let separator = "\n\n---\n\n### 追问："
-
-        var remaining = response
-        var isFirst = true
-
-        while let sepRange = remaining.range(of: separator) {
-            if isFirst {
-                // 第一轮分隔符之后的内容开始解析
-                isFirst = false
-            }
-
-            // 获取分隔符之后的内容
-            let afterSeparator = String(remaining[sepRange.upperBound...])
-
-            // 找到问题结束的位置（下一个换行之后）
-            if let questionEndRange = afterSeparator.range(of: "\n\n") {
-                let question = String(afterSeparator[..<questionEndRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
-
-                // 获取回答部分（下一个分隔符之前，或到结尾）
-                let answerStart = questionEndRange.upperBound
-                let answerPart = String(afterSeparator[answerStart...])
-
-                let nextSepRange = answerPart.range(of: separator)
-                let answer = nextSepRange != nil
-                    ? String(answerPart[..<nextSepRange!.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
-                    : answerPart.trimmingCharacters(in: .whitespacesAndNewlines)
-
-                rounds.append(FollowUpRound(
-                    id: "followup-\(rounds.count)",
-                    question: question,
-                    answer: answer,
-                    isLast: nextSepRange == nil && task?.status == .running
-                ))
-
-                // 继续处理剩余部分
-                remaining = nextSepRange != nil ? answerPart : ""
-            } else {
-                // 问题后面没有回答（正在生成）
-                let question = afterSeparator.trimmingCharacters(in: .whitespacesAndNewlines)
-                rounds.append(FollowUpRound(
-                    id: "followup-\(rounds.count)",
-                    question: question,
-                    answer: "",
-                    isLast: task?.status == .running
-                ))
-                break
-            }
-        }
-
-        return rounds
     }
 
     // MARK: - 追问栏
@@ -549,6 +399,8 @@ struct TaskDetailView: View {
                 taskManager.markViewed(taskId: taskId)
             }
         }
+        // 从 session.jsonl 读取消息
+        self.messages = TaskStore.shared.loadMessages(id: taskId)
     }
 
     private func submitFollowUp() {
@@ -560,15 +412,6 @@ struct TaskDetailView: View {
         TaskManager.shared.followUp(task: t, followUpPrompt: text)
         followUpText = ""
     }
-}
-
-// MARK: - 追问轮次数据
-
-struct FollowUpRound: Identifiable {
-    let id: String
-    let question: String
-    let answer: String
-    let isLast: Bool
 }
 
 // MARK: - 聊天气泡
@@ -587,22 +430,18 @@ struct ChatBubble: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             if role == .assistant {
-                // AI 头像：padding(.top) 与气泡内边距对齐，让头像与首行文字齐平
                 avatarView(role: .assistant)
                     .padding(.top, 12)
             }
 
             VStack(alignment: role == .user ? .trailing : .leading, spacing: 4) {
-                // 消息内容
                 messageContent
 
-                // 消息工具栏（仅在非流式且内容不为空时显示）
                 if !isStreaming && !content.isEmpty {
                     MessageToolbar(content: content)
                         .frame(maxWidth: .infinity, alignment: role == .user ? .trailing : .leading)
                 }
 
-                // 时间戳
                 if let time = time, !isStreaming {
                     Text(time.formatted(date: .omitted, time: .shortened))
                         .font(.caption2)
@@ -612,7 +451,6 @@ struct ChatBubble: View {
             .frame(maxWidth: 600, alignment: role == .user ? .trailing : .leading)
 
             if role == .user {
-                // 用户头像
                 avatarView(role: .user)
             }
         }
@@ -622,7 +460,6 @@ struct ChatBubble: View {
     @ViewBuilder
     private var messageContent: some View {
         if isStreaming && content.isEmpty {
-            // 正在输入状态
             HStack(spacing: 4) {
                 TypingIndicator()
                 Text("正在输入...")
@@ -634,7 +471,6 @@ struct ChatBubble: View {
             .background(role == .user ? Color.accentColor.opacity(0.8) : Color(NSColor.controlBackgroundColor))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         } else if isStreaming {
-            // 流式输出中
             VStack(alignment: .leading, spacing: 4) {
                 Markdown(content)
                     .markdownTheme(.gitHub.text { FontFamily(.system()); FontSize(NSFont.systemFontSize) })
@@ -648,7 +484,6 @@ struct ChatBubble: View {
             .background(Color(NSColor.controlBackgroundColor))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         } else if !content.isEmpty {
-            // 完整消息
             if role == .user {
                 Text(content)
                     .font(.body)
@@ -659,7 +494,6 @@ struct ChatBubble: View {
                     .background(Color.accentColor.opacity(0.8))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             } else {
-                // AI 消息：MarkdownUI 渲染
                 Markdown(content)
                     .markdownTheme(.gitHub.text { FontFamily(.system()); FontSize(NSFont.systemFontSize) })
                     .textSelection(.enabled)
@@ -705,17 +539,17 @@ struct TaskToolbarContent: ToolbarContent {
 
     @ViewBuilder
     private var toolbarContent: some View {
-        if let task = currentTask {
-            // 复制按钮
-            if !task.response.isEmpty {
-                Button("复制", systemImage: "doc.on.doc") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(task.response, forType: .string)
-                }
-                .help("复制回复内容")
+        // 复制按钮 - 从 session.jsonl 读取最后一条 assistant 消息
+        if let lastResponse = TaskStore.shared.getLastResponse(id: taskId), !lastResponse.isEmpty {
+            Button("复制", systemImage: "doc.on.doc") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(lastResponse, forType: .string)
             }
+            .help("复制回复内容")
+        }
 
-            // 打开目录按钮
+        // 打开目录按钮
+        if let task = currentTask {
             Button("目录", systemImage: "folder") {
                 NSWorkspace.shared.open(URL(fileURLWithPath: task.workDir))
             }
@@ -789,7 +623,6 @@ struct MessageToolbar: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            // 复制原文按钮（纯文本，去掉 Markdown 格式）
             toolbarButton(
                 icon: "doc.on.doc",
                 tooltip: "复制原文",
@@ -804,7 +637,6 @@ struct MessageToolbar: View {
                 isHoveringCopy = hovering
             }
 
-            // 复制 Markdown 按钮（原始 Markdown 源码）
             if !content.isEmpty {
                 toolbarButton(
                     icon: "chevron.left.forwardslash.chevron.right",
@@ -838,34 +670,24 @@ struct MessageToolbar: View {
         .help(tooltip)
     }
 
-    /// 去掉 Markdown 格式，提取纯文本
     private func stripMarkdown(_ markdown: String) -> String {
         var lines = markdown.components(separatedBy: "\n")
-
         var result: [String] = []
         var inCodeBlock = false
 
         for line in lines {
-            // 检测代码块
             if line.hasPrefix("```") {
                 inCodeBlock.toggle()
                 continue
             }
-
-            // 跳过代码块内的内容
-            if inCodeBlock {
-                continue
-            }
+            if inCodeBlock { continue }
 
             var processedLine = line
-
-            // 去掉标题标记 # ## ### 等
             while processedLine.hasPrefix("#") {
                 processedLine = String(processedLine.dropFirst())
             }
             processedLine = processedLine.trimmingCharacters(in: .whitespaces)
 
-            // 去掉列表标记 - * +
             if processedLine.hasPrefix("- ") {
                 processedLine = String(processedLine.dropFirst(2))
             } else if processedLine.hasPrefix("* ") {
@@ -874,60 +696,40 @@ struct MessageToolbar: View {
                 processedLine = String(processedLine.dropFirst(2))
             }
 
-            // 去掉有序列表 1. 2. 等
             let orderedListPattern = "^\\d+\\.\\s+"
             if let range = processedLine.range(of: orderedListPattern, options: .regularExpression) {
                 processedLine.removeSubrange(range)
             }
 
-            // 去掉引用标记 >
             if processedLine.hasPrefix("> ") {
                 processedLine = String(processedLine.dropFirst(2))
             }
 
-            // 去掉水平线 --- *** ___
             let stripped = processedLine.trimmingCharacters(in: .whitespaces)
-            if stripped == "---" || stripped == "***" || stripped == "___" {
-                continue
-            }
+            if stripped == "---" || stripped == "***" || stripped == "___" { continue }
 
-            // 跳过表格分隔行 |---|---|
             if stripped.contains("|") && stripped.contains("-") && !stripped.contains(where: { !$0.isWhitespace && $0 != "|" && $0 != "-" }) {
                 continue
             }
 
-            // 去掉表格的管道符，保留内容
             if processedLine.contains("|") {
                 let cells = processedLine.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
                 processedLine = cells.joined(separator: " | ")
             }
 
-            // 去掉行内代码 `...`
             processedLine = processedLine.replacingOccurrences(of: "`([^`]+)`", with: "$1", options: .regularExpression)
-
-            // 去掉链接 [text](url) → text
             processedLine = processedLine.replacingOccurrences(of: "\\[([^\\]]+)\\]\\([^)]+\\)", with: "$1", options: .regularExpression)
-
-            // 去掉图片 ![alt](url)
             processedLine = processedLine.replacingOccurrences(of: "!\\[[^\\]]*\\]\\([^)]+\\)", with: "", options: .regularExpression)
-
-            // 去掉粗体 **text** 或 __text__
             processedLine = processedLine.replacingOccurrences(of: "\\*\\*([^*]+)\\*\\*", with: "$1", options: .regularExpression)
             processedLine = processedLine.replacingOccurrences(of: "__([^_]+)__", with: "$1", options: .regularExpression)
-
-            // 去掉斜体 *text* 或 _text_
             processedLine = processedLine.replacingOccurrences(of: "\\*([^*]+)\\*", with: "$1", options: .regularExpression)
             processedLine = processedLine.replacingOccurrences(of: "_([^_]+)_", with: "$1", options: .regularExpression)
-
-            // 去掉删除线 ~~text~~
             processedLine = processedLine.replacingOccurrences(of: "~~([^~]+)~~", with: "$1", options: .regularExpression)
 
             result.append(processedLine)
         }
 
-        // 移除多余空行
         let finalText = result.joined(separator: "\n")
-        // 将连续多个空行压缩为一个
         return finalText.replacingOccurrences(of: "\n{3,}", with: "\n\n", options: .regularExpression)
     }
 }
