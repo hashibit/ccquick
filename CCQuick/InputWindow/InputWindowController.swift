@@ -160,6 +160,18 @@ class InputWindowController: NSObject {
     }
 
     func show() {
+        // 调试：打印所有可见窗口
+        print("[Debug] 当前可见窗口:")
+        for window in NSApp.windows where window.isVisible {
+            print("  - title='\(window.title)', autosave='\(window.frameAutosaveName)'")
+        }
+
+        // 先隐藏历史窗口（通过 SwiftUI Window 的 autosave name 查找）
+        for window in NSApp.windows where window.isVisible && window.frameAutosaveName.contains("history") {
+            print("[Debug] 隐藏历史窗口: \(window.title)")
+            window.orderOut(nil)
+        }
+
         // 保存之前的活动应用
         previousApp = NSWorkspace.shared.frontmostApplication
 
