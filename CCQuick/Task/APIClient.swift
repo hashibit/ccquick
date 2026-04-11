@@ -275,6 +275,9 @@ private enum ToolExecutor {
     private static func executeBash(command: String, workDir: String) throws -> String {
         logTool("▸ bash> \(command.prefix(200))", category: "Tool")
 
+        // 命令预检查：拒绝访问工作目录之外的路径
+        try validateCommand(command, workDir: workDir)
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
         process.arguments = ["-c", command]
@@ -308,6 +311,42 @@ private enum ToolExecutor {
         }
 
         return result
+    }
+
+    /// 命令预检查：拒绝访问工作目录之外的用户路径
+    private static func validateCommand(_ command: String, workDir: String) throws {
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
+
+        // 拒绝 ~ 或 $HOME 开头的路径
+        let homeAccessPatterns = [
+            "~/",
+            "~ ",
+            "$HOME",
+            homeDir,
+            "/Users/\(NSUserName())",
+        ]
+
+        for pattern in homeAccessPatterns where command.contains(pattern) {
+            // 允许 workDir 本身
+            if workDir.hasPrefix(pattern) {
+                continue
+            }
+            throw ToolError.commandBlocked("命令尝试访问用户主目录: \(command.prefix(100))")
+        }
+
+        // 拒绝 /Users/ 下非 workDir 的路径
+        if command.contains("/Users/") {
+            let userPathRegex = try NSRegularExpression(pattern: "/Users/[^\\s'\"]+")
+            let matches = userPathRegex.matches(in: command, range: NSRange(command.startIndex..., in: command))
+            for match in matches {
+                if let range = Range(match.range, in: command) {
+                    let path = String(command[range])
+                    if !path.hasPrefix(workDir) {
+                        throw ToolError.commandBlocked("命令尝试访问用户目录: \(path)")
+                    }
+                }
+            }
+        }
     }
 
     private static func executeRead(filePath: String, workDir: String) throws -> String {
@@ -362,6 +401,7 @@ private enum ToolError: Error, LocalizedError {
     case unknownTool(String)
     case pathOutsideSandbox(String)
     case skillNotFound(String)
+    case commandBlocked(String)
 
     var errorDescription: String? {
         switch self {
@@ -371,6 +411,8 @@ private enum ToolError: Error, LocalizedError {
             return "路径超出工作目录限制: \(path)"
         case .skillNotFound(let name):
             return "Skill 未找到: \(name)"
+        case .commandBlocked(let reason):
+            return "命令被拒绝: \(reason)"
         }
     }
 }
