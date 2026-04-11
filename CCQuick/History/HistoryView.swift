@@ -184,6 +184,7 @@ struct HistoryView: View {
         case .running: return tasks.filter { $0.status == .running }.count
         case .completed: return tasks.filter { $0.status == .completed }.count
         case .failed: return tasks.filter { $0.status == .failed }.count
+        case .stopped: return tasks.filter { $0.status == .stopped }.count
         }
     }
 
@@ -205,6 +206,7 @@ struct HistoryView: View {
         case .running: result = result.filter { $0.status == .running }
         case .completed: result = result.filter { $0.status == .completed }
         case .failed: result = result.filter { $0.status == .failed }
+        case .stopped: result = result.filter { $0.status == .stopped }
         }
 
         // 按搜索文本过滤（从 session.jsonl 读取 prompt）
@@ -325,6 +327,12 @@ struct TaskDetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+                Button("停止", systemImage: "stop.fill") {
+                    TaskManager.shared.stop(task: task)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .controlSize(.small)
             } else {
                 Image(systemName: "arrow.turn.down.right")
                     .foregroundStyle(.tertiary)
@@ -473,6 +481,14 @@ struct TaskToolbarContent: ToolbarContent {
 
     @ViewBuilder
     private var toolbarContent: some View {
+        // 停止按钮
+        if let task = currentTask, task.status == .running {
+            Button("停止", systemImage: "stop.fill") {
+                TaskManager.shared.stop(task: task)
+            }
+            .help("停止当前任务")
+        }
+
         // 复制按钮 - 从 session.jsonl 读取最后一条 assistant 消息
         if let lastResponse = TaskStore.shared.getLastResponse(id: taskId), !lastResponse.isEmpty {
             Button("复制", systemImage: "doc.on.doc") {

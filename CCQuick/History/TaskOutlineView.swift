@@ -289,6 +289,7 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
             case .completed: return NSColor.systemGreen.withAlphaComponent(0.85)
             case .failed: return NSColor.systemRed.withAlphaComponent(0.85)
             case .running: return NSColor.systemBlue.withAlphaComponent(0.85)
+            case .stopped: return NSColor.systemOrange.withAlphaComponent(0.85)
             }
         }
     }

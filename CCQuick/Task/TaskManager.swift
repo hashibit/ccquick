@@ -7,6 +7,7 @@ class TaskManager {
 
     private(set) var runningTasks: [CCTask] = []
     private(set) var unviewedTasks: [CCTask] = []
+    private var processControllers: [String: ProcessController] = [:]
 
     var onTaskCompleted: ((CCTask) -> Void)?
 
@@ -169,6 +170,7 @@ class TaskManager {
             guard let self = self else { return }
             logTaskCompleted(completed)
             self.runningTasks.removeAll { $0.id == completed.id }
+            self.processControllers.removeValue(forKey: completed.id)
             if completed.status == .completed {
                 self.unviewedTasks.append(completed)
             }
@@ -178,6 +180,8 @@ class TaskManager {
                 logError("保存完成任务失败: \(error)", category: "Task")
             }
             self.onTaskCompleted?(completed)
+        }, onControllerCreated: { [weak self] controller in
+            self?.processControllers[task.id] = controller
         })
     }
 
@@ -190,6 +194,26 @@ class TaskManager {
             print("Failed to mark task as viewed: \(error)")
         }
         unviewedTasks.removeAll { $0.id == taskId }
+    }
+
+    /// 停止正在运行的任务
+    func stop(task: CCTask) {
+        guard task.status == .running else { return }
+
+        if let controller = processControllers[task.id] {
+            if controller.stop() {
+                logInfo("正在停止任务: \(task.id)", category: "Task")
+            }
+            // 不立即移除 runningTasks —— terminationHandler 会触发，onComplete 处理清理
+        } else {
+            // HTTP 路径或未知进程 —— 手动标记停止
+            guard var stoppedTask = runningTasks.first(where: { $0.id == task.id }) else { return }
+            stoppedTask.status = .stopped
+            stoppedTask.finishedAt = .now
+            runningTasks.removeAll { $0.id == stoppedTask.id }
+            try? TaskStore.shared.save(stoppedTask)
+            onTaskCompleted?(stoppedTask)
+        }
     }
 
     /// 追问：在当前任务的会话中继续对话，不创建新历史
@@ -231,12 +255,16 @@ class TaskManager {
                 guard let self = self else { return }
                 logTaskCompleted(completed)
                 self.runningTasks.removeAll { $0.id == completed.id }
+                self.processControllers.removeValue(forKey: completed.id)
                 do {
                     try TaskStore.shared.save(completed)
                 } catch {
                     logError("保存完成任务失败: \(error)", category: "Task")
                 }
                 self.onTaskCompleted?(completed)
+            },
+            onControllerCreated: { [weak self] controller in
+                self?.processControllers[runningTask.id] = controller
             }
         )
     }
