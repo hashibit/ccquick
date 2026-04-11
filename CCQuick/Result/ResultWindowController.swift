@@ -92,6 +92,10 @@ struct ResultView: View {
             Label("运行中", systemImage: "arrow.clockwise.circle")
                 .font(.caption)
                 .foregroundStyle(.blue)
+        case .stopped:
+            Label("已停止", systemImage: "hand.raised.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
         }
     }
 }

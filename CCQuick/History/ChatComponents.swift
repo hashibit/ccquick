@@ -16,6 +16,7 @@ enum TaskGroup: String, CaseIterable, Identifiable {
     case running = "运行中"
     case completed = "已完成"
     case failed = "失败"
+    case stopped = "已停止"
 
     var id: String { rawValue }
 
@@ -25,6 +26,7 @@ enum TaskGroup: String, CaseIterable, Identifiable {
         case .running: return "arrow.clockwise"
         case .completed: return "checkmark.circle.fill"
         case .failed: return "xmark.circle.fill"
+        case .stopped: return "hand.raised.fill"
         }
     }
 
@@ -34,6 +36,7 @@ enum TaskGroup: String, CaseIterable, Identifiable {
         case .running: return .blue
         case .completed: return .green
         case .failed: return .red
+        case .stopped: return .orange
         }
     }
 }
@@ -150,6 +153,7 @@ struct TaskStatusLabel: View {
         case .completed: return ("已完成", "checkmark.circle.fill", .green)
         case .failed: return ("失败", "xmark.circle.fill", .red)
         case .running: return ("运行中", "arrow.clockwise", .blue)
+        case .stopped: return ("已停止", "hand.raised.fill", .orange)
         }
     }
 }

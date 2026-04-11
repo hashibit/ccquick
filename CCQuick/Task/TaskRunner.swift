@@ -5,6 +5,45 @@ enum TaskRunnerError: Error {
     case launchFailed(Error)
 }
 
+/// Thread-safe controller for a running Claude CLI process.
+class ProcessController {
+    private let process: Process
+    private let lock = NSLock()
+    private var stoppedByUser = false
+
+    init(process: Process) {
+        self.process = process
+    }
+
+    /// Terminate the process. Returns true on first call, false if already stopped.
+    @discardableResult
+    func stop() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !stoppedByUser else { return false }
+        stoppedByUser = true
+
+        let pid = process.processIdentifier
+        // Kill the process group to also kill child processes
+        kill(-pid, SIGTERM)
+
+        // Force-kill fallback if SIGTERM doesn't work within 3 seconds
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + .seconds(3)) { [weak process] in
+            guard let process = process, process.isRunning else { return }
+            process.terminate()
+        }
+
+        return true
+    }
+
+    /// Called from the terminationHandler to determine if user initiated the stop.
+    func isStoppedByUser() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return stoppedByUser
+    }
+}
+
 class TaskRunner {
 
     // MARK: - Tool Call Parsing
@@ -103,7 +142,8 @@ class TaskRunner {
         task: CCTask,
         prompt: String,
         onOutput: @escaping (String) -> Void,
-        onComplete: @escaping (CCTask) -> Void
+        onComplete: @escaping (CCTask) -> Void,
+        onControllerCreated: @escaping (ProcessController) -> Void = { _ in }
     ) {
         _execute(
             task: task,
@@ -111,7 +151,8 @@ class TaskRunner {
             logLabel: "Claude CLI Session",
             parseToolCalls: true,
             onOutput: onOutput,
-            onComplete: onComplete
+            onComplete: onComplete,
+            onControllerCreated: onControllerCreated
         )
     }
 
@@ -121,7 +162,8 @@ class TaskRunner {
         plan: String,
         userPrompt: String,
         onOutput: @escaping (String) -> Void,
-        onComplete: @escaping (CCTask) -> Void
+        onComplete: @escaping (CCTask) -> Void,
+        onControllerCreated: @escaping (ProcessController) -> Void = { _ in }
     ) {
         let workDir = URL(fileURLWithPath: task.workDir)
         try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
@@ -156,7 +198,8 @@ class TaskRunner {
             logLabel: "Claude CLI Session (带计划执行)",
             parseToolCalls: true,
             onOutput: onOutput,
-            onComplete: onComplete
+            onComplete: onComplete,
+            onControllerCreated: onControllerCreated
         )
     }
 
@@ -165,7 +208,8 @@ class TaskRunner {
         task: CCTask,
         followUpPrompt: String,
         onOutput: @escaping (String) -> Void,
-        onComplete: @escaping (CCTask) -> Void
+        onComplete: @escaping (CCTask) -> Void,
+        onControllerCreated: @escaping (ProcessController) -> Void = { _ in }
     ) {
         _execute(
             task: task,
@@ -174,7 +218,8 @@ class TaskRunner {
             parseToolCalls: false,
             onOutput: onOutput,
             onComplete: onComplete,
-            continueSession: true
+            continueSession: true,
+            onControllerCreated: onControllerCreated
         )
     }
 
@@ -187,7 +232,8 @@ class TaskRunner {
         parseToolCalls: Bool,
         onOutput: @escaping (String) -> Void,
         onComplete: @escaping (CCTask) -> Void,
-        continueSession: Bool = false
+        continueSession: Bool = false,
+        onControllerCreated: @escaping (ProcessController) -> Void = { _ in }
     ) {
         guard let claudePath = findClaudePath() else {
             failTask(task, message: "找不到 claude CLI。请确认已通过 npm install -g @anthropic-ai/claude-code 安装并在 PATH 中。", onComplete: onComplete)
@@ -223,6 +269,9 @@ class TaskRunner {
 
         var buffer = ""
 
+        let controller = ProcessController(process: process)
+        onControllerCreated(controller)
+
         pipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
             guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else { return }
@@ -244,7 +293,11 @@ class TaskRunner {
             ))
             var completed = task
             completed.finishedAt = .now
-            completed.status = (p.terminationStatus == 0) ? .completed : .failed
+            if controller.isStoppedByUser() {
+                completed.status = .stopped
+            } else {
+                completed.status = (p.terminationStatus == 0) ? .completed : .failed
+            }
             Task { @MainActor in onComplete(completed) }
         }
 

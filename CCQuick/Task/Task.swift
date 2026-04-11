@@ -4,6 +4,7 @@ enum TaskStatus: String, Codable {
     case running
     case completed
     case failed
+    case stopped
 }
 
 struct CCTask: Identifiable, Codable, Hashable {
