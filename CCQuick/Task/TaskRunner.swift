@@ -164,17 +164,17 @@ class TaskRunner {
     static func runFollowUp(
         task: CCTask,
         followUpPrompt: String,
-        contextPrompt: String,
         onOutput: @escaping (String) -> Void,
         onComplete: @escaping (CCTask) -> Void
     ) {
         _execute(
             task: task,
-            prompt: contextPrompt,
+            prompt: followUpPrompt,
             logLabel: "Claude CLI Session (追问)",
             parseToolCalls: false,
             onOutput: onOutput,
-            onComplete: onComplete
+            onComplete: onComplete,
+            continueSession: true
         )
     }
 
@@ -186,7 +186,8 @@ class TaskRunner {
         logLabel: String,
         parseToolCalls: Bool,
         onOutput: @escaping (String) -> Void,
-        onComplete: @escaping (CCTask) -> Void
+        onComplete: @escaping (CCTask) -> Void,
+        continueSession: Bool = false
     ) {
         guard let claudePath = findClaudePath() else {
             failTask(task, message: "找不到 claude CLI。请确认已通过 npm install -g @anthropic-ai/claude-code 安装并在 PATH 中。", onComplete: onComplete)
@@ -199,7 +200,11 @@ class TaskRunner {
         let env = buildEnvironment()
         let process = Process()
         process.executableURL = URL(fileURLWithPath: claudePath)
-        process.arguments = ["--dangerously-skip-permissions", "-p", prompt]
+        process.arguments = ["--dangerously-skip-permissions"]
+        if continueSession {
+            process.arguments?.append("--continue")
+        }
+        process.arguments?.append(contentsOf: ["-p", prompt])
         process.currentDirectoryURL = workDir
         process.environment = env
 

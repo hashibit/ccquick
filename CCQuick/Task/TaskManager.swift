@@ -251,15 +251,10 @@ class TaskManager {
             logError("保存任务失败: \(error)", category: "Task")
         }
 
-        // 从 session.jsonl 读取历史消息，构建上下文 prompt
-        let messages = TaskStore.shared.loadMessages(id: task.id)
-        let contextPrompt = buildContextPrompt(messages: messages, followUpPrompt: followUpPrompt)
-
-        // 执行追问
+        // 执行追问（--continue 自动恢复会话上下文）
         TaskRunner.runFollowUp(
             task: runningTask,
             followUpPrompt: followUpPrompt,
-            contextPrompt: contextPrompt,
             onOutput: { output in
                 logDebug("追问输出: \(output.prefix(100))", category: "Task")
             },
@@ -275,24 +270,6 @@ class TaskManager {
                 self.onTaskCompleted?(completed)
             }
         )
-    }
-
-    /// 构建追问的上下文 prompt
-    private func buildContextPrompt(messages: [SessionMessage], followUpPrompt: String) -> String {
-        var historyText = ""
-        for msg in messages where msg.type == .user || msg.type == .assistant {
-            let role = msg.type == .user ? "用户" : "AI"
-            historyText += "【\(role)】\n\(msg.content)\n\n"
-        }
-
-        return """
-        【历史对话】
-        \(historyText)
-        ---
-        【追问】\(followUpPrompt)
-
-        请继续回答，注意保持上下文连贯。
-        """
     }
 
     var unviewedCount: Int { unviewedTasks.count }
