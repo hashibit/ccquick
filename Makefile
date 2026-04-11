@@ -1,6 +1,10 @@
 # CCQuick Makefile
 
-.PHONY: build release run clean install uninstall open
+.PHONY: build release run clean install uninstall open test
+
+# 测试
+test:
+	xcodebuild test -scheme CCQuick -configuration Debug -destination 'platform=macOS'
 
 # 构建目录
 BUILD_DIR = $(HOME)/Library/Developer/Xcode/DerivedData/CCQuick-*/Build/Products
@@ -52,6 +56,7 @@ uninstall:
 # 显示帮助
 help:
 	@echo "CCQuick Build Commands:"
+	@echo "  make test         - 运行单元测试"
 	@echo "  make build        - Debug 构建"
 	@echo "  make release      - Release 构建"
 	@echo "  make run          - 构建并运行 Debug 版本"

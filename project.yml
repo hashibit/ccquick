@@ -2,13 +2,18 @@ name: CCQuick
 options:
   bundleIdPrefix: com.ccquick
   deploymentTarget:
-    macOS: "13.0"
+    macOS: "14.0"
   xcodeVersion: "16"
+
+packages:
+  MarkdownUI:
+    url: https://github.com/gonzalezreal/swift-markdown-ui
+    from: "2.4.0"
 
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
     CODE_SIGN_STYLE: Automatic
     ENABLE_HARDENED_RUNTIME: YES
 
@@ -16,9 +21,11 @@ targets:
   CCQuick:
     type: application
     platform: macOS
-    deploymentTarget: "13.0"
+    deploymentTarget: "14.0"
     sources:
       - path: CCQuick
+    dependencies:
+      - package: MarkdownUI
     info:
       path: CCQuick/Resources/Info.plist
     settings:
@@ -26,3 +33,15 @@ targets:
       CODE_SIGN_ENTITLEMENTS: CCQuick/CCQuick.entitlements
       INFOPLIST_FILE: CCQuick/Resources/Info.plist
       PRODUCT_NAME: CCQuick
+
+  CCQuickTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: CCQuickTests
+    dependencies:
+      - target: CCQuick
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.ccquick.tests
+      GENERATE_INFOPLIST_FILE: YES

@@ -4,7 +4,7 @@ import MarkdownUI
 // MARK: - 主视图
 
 struct HistoryView: View {
-    @ObservationIgnored @Bindable private var taskManager = TaskManager.shared
+    @Bindable private var taskManager = TaskManager.shared
     @State private var tasks: [CCTask] = []
     @State private var searchText = ""
     @State private var filteredTasks: [CCTask] = []
