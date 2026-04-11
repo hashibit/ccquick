@@ -62,8 +62,7 @@ class TaskManager {
             if !apiKey.isEmpty {
                 let providers = CodingPlanProvider.matchProviders(for: apiKey)
                 if let provider = providers.first {
-                    // 两阶段执行
-                    twoStageExecute(
+                    executeWithHTTPTools(
                         task: task,
                         prompt: trimmed,
                         workDir: workDir,
@@ -75,21 +74,20 @@ class TaskManager {
             }
         }
 
-        // 默认 Claude 订阅：直接执行（无两阶段）
+        // 默认 Claude 订阅：直接执行
         executeDirectly(task: task, prompt: trimmed)
     }
 
-    /// 两阶段执行
-    private func twoStageExecute(
+    /// HTTP Tool Call 执行
+    private func executeWithHTTPTools(
         task: CCTask,
         prompt: String,
         workDir: String,
         provider: CodingPlanProvider,
         apiKey: String
     ) {
-        logInfo("第一阶段：询问 LLM...", category: "Task")
+        logInfo("HTTP Tool Call 执行...", category: "Task")
 
-        // 保存任务状态
         do {
             try TaskStore.shared.save(task)
         } catch {
@@ -98,92 +96,63 @@ class TaskManager {
 
         Task {
             do {
-                let response = try await APIClient.ask(
+                let response = try await APIClient.executeWithTools(
                     prompt: prompt,
                     provider: provider,
-                    apiKey: apiKey
+                    apiKey: apiKey,
+                    workDir: workDir
                 )
 
-                if response.canAnswerDirectly, let answer = response.answer {
-                    // 直接回答
-                    logInfo("直接回答任务", category: "Task")
-                    await handleQuickAnswer(task: task, answer: answer)
-                } else if let plan = response.plan {
-                    // 需要计划执行
-                    logInfo("需要计划执行: \(plan.prefix(50))...", category: "Task")
-                    await executeWithPlan(task: task, plan: plan, userPrompt: prompt)
-                } else {
-                    // 异常情况，直接执行
-                    logWarning("第一阶段返回无效响应，直接执行", category: "Task")
-                    executeDirectly(task: task, prompt: prompt)
+                // 写入 assistant 消息
+                try? TaskStore.shared.appendMessage(id: task.id, message: SessionMessage(
+                    type: .assistant,
+                    content: response
+                ))
+
+                var completedTask = task
+                completedTask.status = .completed
+                completedTask.finishedAt = .now
+                completedTask.viewed = false
+
+                logTaskCompleted(completedTask)
+                runningTasks.removeAll { $0.id == task.id }
+                unviewedTasks.append(completedTask)
+
+                do {
+                    try TaskStore.shared.save(completedTask)
+                } catch {
+                    logError("保存任务失败: \(error)", category: "Task")
                 }
+
+                onTaskCompleted?(completedTask)
+                NotificationService.shared.notify(task: completedTask, response: response)
             } catch {
-                logError("第一阶段失败: \(error.localizedDescription)", category: "Task")
-                // 降级：直接执行
-                executeDirectly(task: task, prompt: prompt)
+                logError("HTTP Tool Call 失败: \(error.localizedDescription)", category: "Task")
+
+                try? TaskStore.shared.appendMessage(id: task.id, message: SessionMessage(
+                    type: .assistant,
+                    content: "执行失败：\(error.localizedDescription)"
+                ))
+
+                var failed = task
+                failed.status = .failed
+                failed.finishedAt = .now
+
+                logTaskCompleted(failed)
+                runningTasks.removeAll { $0.id == task.id }
+
+                do {
+                    try TaskStore.shared.save(failed)
+                } catch {
+                    logError("保存任务失败: \(error)", category: "Task")
+                }
+
+                onTaskCompleted?(failed)
             }
         }
     }
 
-    /// 处理快速回答
-    private func handleQuickAnswer(task: CCTask, answer: String) async {
-        // 写入 assistant 消息到 session.jsonl
-        try? TaskStore.shared.appendMessage(id: task.id, message: SessionMessage(
-            type: .assistant,
-            content: answer
-        ))
-
-        // 更新任务状态
-        var completedTask = task
-        completedTask.status = .completed
-        completedTask.finishedAt = .now
-        completedTask.viewed = false
-
-        // 从 runningTasks 移除，添加到未查看列表
-        runningTasks.removeAll { $0.id == task.id }
-        unviewedTasks.append(completedTask)
-
-        // 保存任务
-        do {
-            try TaskStore.shared.save(completedTask)
-        } catch {
-            logError("保存任务失败: \(error)", category: "Task")
-        }
-
-        // 通知
-        onTaskCompleted?(completedTask)
-        NotificationService.shared.notify(task: completedTask, response: answer)
-    }
-
-    /// 带计划执行
-    private func executeWithPlan(task: CCTask, plan: String, userPrompt: String) async {
-        // 保存任务
-        do {
-            try TaskStore.shared.save(task)
-        } catch {
-            logError("保存任务失败: \(error)", category: "Task")
-        }
-
-        logInfo("启动 TaskRunner.runWithPlan...", category: "Task")
-        TaskRunner.runWithPlan(task: task, plan: plan, userPrompt: userPrompt, onOutput: { output in
-            logDebug("任务输出: \(output.prefix(100))", category: "Task")
-        }, onComplete: { [weak self] completed in
-            guard let self = self else { return }
-            logInfo("任务完成: \(completed.id), status=\(completed.status.rawValue)", category: "Task")
-            self.runningTasks.removeAll { $0.id == completed.id }
-            if completed.status == .completed {
-                self.unviewedTasks.append(completed)
-            }
-            do {
-                try TaskStore.shared.save(completed)
-            } catch {
-                logError("保存完成任务失败: \(error)", category: "Task")
-            }
-            self.onTaskCompleted?(completed)
-        })
-    }
-
-    /// 直接执行（无两阶段）
+    /// 直接执行
     private func executeDirectly(task: CCTask, prompt: String) {
         // 保存任务
         do {
@@ -198,7 +167,7 @@ class TaskManager {
             logDebug("任务输出: \(output.prefix(100))", category: "Task")
         }, onComplete: { [weak self] completed in
             guard let self = self else { return }
-            logInfo("任务完成: \(completed.id), status=\(completed.status.rawValue)", category: "Task")
+            logTaskCompleted(completed)
             self.runningTasks.removeAll { $0.id == completed.id }
             if completed.status == .completed {
                 self.unviewedTasks.append(completed)
@@ -260,7 +229,7 @@ class TaskManager {
             },
             onComplete: { [weak self] completed in
                 guard let self = self else { return }
-                logInfo("追问完成: \(completed.id)", category: "Task")
+                logTaskCompleted(completed)
                 self.runningTasks.removeAll { $0.id == completed.id }
                 do {
                     try TaskStore.shared.save(completed)
@@ -270,6 +239,11 @@ class TaskManager {
                 self.onTaskCompleted?(completed)
             }
         )
+    }
+
+    private func logTaskCompleted(_ task: CCTask) {
+        let status = task.status == .completed ? "✅ 完成" : "❌ 失败"
+        logInfo("\(status): \(task.id), 耗时: \(task.elapsedString)", category: "Task")
     }
 
     var unviewedCount: Int { unviewedTasks.count }

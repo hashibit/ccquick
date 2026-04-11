@@ -98,7 +98,7 @@ class TaskRunner {
 
     // MARK: - Public API
 
-    /// 直接执行（无两阶段）
+    /// 直接执行
     static func run(
         task: CCTask,
         prompt: String,
@@ -115,7 +115,7 @@ class TaskRunner {
         )
     }
 
-    /// 带计划的执行（第二阶段）
+    /// 带计划执行
     static func runWithPlan(
         task: CCTask,
         plan: String,
