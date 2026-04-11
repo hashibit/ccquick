@@ -160,24 +160,35 @@ class InputWindowController: NSObject {
     }
 
     func show() {
-        // 调试：打印所有可见窗口
-        print("[Debug] 当前可见窗口:")
-        for window in NSApp.windows where window.isVisible {
-            print("  - title='\(window.title)', autosave='\(window.frameAutosaveName)'")
-        }
-
-        // 先隐藏历史窗口（通过 SwiftUI Window 的 autosave name 查找）
-        for window in NSApp.windows where window.isVisible && window.frameAutosaveName.contains("history") {
-            print("[Debug] 隐藏历史窗口: \(window.title)")
-            window.orderOut(nil)
-        }
-
         // 保存之前的活动应用
         previousApp = NSWorkspace.shared.frontmostApplication
 
         centerPanel()
+
+        // 仅当 CCQuick 不是当前前台 app 时，才需要阻止其他窗口被 NSApp.activate 带到前台
+        // 若 CCQuick 本身已在前台（如设置窗口打开着），则不干预，窗口保持原位
+        let windowsToSuppress: [NSWindow]
+        if !NSRunningApplication.current.isActive {
+            windowsToSuppress = NSApp.windows.filter { $0 !== panel && $0.isVisible }
+            for window in windowsToSuppress {
+                window.orderOut(nil)
+            }
+        } else {
+            windowsToSuppress = []
+        }
+
         panel?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+
+        // 激活完成后将被临时隐藏的窗口恢复到后方（对用户无感知，它们本就在其他 app 后面）
+        if !windowsToSuppress.isEmpty {
+            DispatchQueue.main.async {
+                for window in windowsToSuppress {
+                    window.orderBack(nil)
+                }
+            }
+        }
+
         // 让 textField 成为 first responder，并将光标移到末尾
         DispatchQueue.main.async {
             if let contentView = self.panel?.contentView,

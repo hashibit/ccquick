@@ -24,11 +24,18 @@ class ProcessController {
         stoppedByUser = true
 
         let pid = process.processIdentifier
-        // Kill the process group to also kill child processes
-        kill(-pid, SIGTERM)
 
-        // Force-kill fallback if SIGTERM doesn't work within 3 seconds
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + .seconds(3)) { [weak process] in
+        // Step 1: Send SIGINT (Ctrl+C) — Claude CLI handles this gracefully
+        kill(-pid, SIGINT)
+
+        // Step 2: If still running after 2s, force-kill the entire process group
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + .seconds(2)) { [weak self, weak process] in
+            guard let process = process, process.isRunning else { return }
+            kill(-pid, SIGKILL)
+        }
+
+        // Step 3: Final fallback — NSProcess.terminate() after 5s
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + .seconds(5)) { [weak process] in
             guard let process = process, process.isRunning else { return }
             process.terminate()
         }
