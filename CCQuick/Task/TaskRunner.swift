@@ -253,7 +253,8 @@ class TaskRunner {
         let env = buildEnvironment()
         let process = Process()
         process.executableURL = URL(fileURLWithPath: claudePath)
-        process.arguments = ["--dangerously-skip-permissions"]
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
+        process.arguments = ["--dangerously-skip-permissions", "--add-dir", homeDir]
         if continueSession {
             process.arguments?.append("--continue")
         }
