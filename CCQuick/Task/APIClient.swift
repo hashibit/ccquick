@@ -22,19 +22,30 @@ class APIClient {
             }
         }
         let skillsDescription = SkillRegistry.formatSkillsDescription(skills)
-        // 硬匹配：根据用户输入检测可能相关的 skill
-        let skillHint = SkillRegistry.matchedSkillHints(for: prompt, skills: skills)
+        // 硬匹配：根据用户输入检测可能相关的 skill，注入摘要到系统提示词
+        let matchedSkills = SkillRegistry.matchedSkillNames(for: prompt, skills: skills)
+        var preloadedSkillContent = ""
+        let maxSkillChars = 800  // 只注入摘要，避免大 skill 拖慢 API
+        for skillName in matchedSkills {
+            let skillPath = SkillRegistry.skillsDir().appendingPathComponent(skillName).appendingPathComponent("SKILL.md")
+            if let content = try? String(contentsOfFile: skillPath.path, encoding: .utf8) {
+                let truncated = content.count > maxSkillChars
+                let summary = truncated ? String(content.prefix(maxSkillChars)) + "\n...(已截断，如需完整指令请用 Skill 工具加载)" : content
+                logAI("⚡ 预加载 skill: \(skillName) (\(content.utf8.count) 字符\(truncated ? ", 截断至 \(maxSkillChars)" : ""))", category: "Skill")
+                preloadedSkillContent += "\n\n--- Skill「\(skillName)」摘要 ---\n\(summary)\n"
+            }
+        }
         let systemPrompt = """
-        你是一个智能助手，通过调用工具来完成任务。
+        你是一个智能助手，通过调用工具来完成任务。尽量用最少的步骤完成任务，能一步做完就不要分多步。
 
         重要规则：
         - 所有文件操作（Bash/Read/Write）都限制在工作目录内：\(workDir)
         - 不要读取或修改工作目录以外的任何文件
         - Bash 命令应始终在当前目录或其子目录中操作
 
-        已安装的 skills 列表如下。当用户的请求中提到了某个 skill 的名称或触发词，或请求内容与 skill 描述相关时，必须（MUST）先使用 Skill 工具加载该 skill 的完整指令，然后再执行：
+        已安装的 skills 列表如下。如果需要查看某个 skill 的详细指令，使用 Skill 工具加载：
         \(skillsDescription)
-        \(skillHint)
+        \(preloadedSkillContent)
         """
 
         var messages: [[String: Any]] = [
@@ -496,45 +507,46 @@ private enum SkillRegistry {
         formatSkillsDescription(installedSkills())
     }
 
-    /// 根据用户输入硬匹配触发词，返回命中的 skill 提示（方案 3）
-    static func matchedSkillHints(for userInput: String, skills: [SkillMeta]? = nil) -> String? {
+    /// 根据用户输入硬匹配触发词，返回命中的 skill 名称列表
+    static func matchedSkillNames(for userInput: String, skills: [SkillMeta]? = nil) -> [String] {
         let allSkills = skills ?? installedSkills()
         let input = userInput.lowercased()
         logAI("🔍 硬匹配输入: \"\(input.prefix(80))\"", category: "Skill")
 
-        var matched: [(name: String, reason: String)] = []
+        var matched: [String] = []
         for skill in allSkills {
             // 匹配 skill 名称
             let nameLower = skill.name.lowercased()
             if input.contains(nameLower) {
-                logAI("  ✅ 名称命中: \(skill.name) (匹配 \"\(nameLower)\")", category: "Skill")
-                matched.append((skill.name, "名称"))
+                logAI("  ✅ 名称命中: \(skill.name)", category: "Skill")
+                matched.append(skill.name)
                 continue
             }
             // 匹配触发词
-            var hit = false
             for trigger in skill.triggers {
                 let t = trigger.trimmingCharacters(in: .whitespaces).lowercased()
                 if !t.isEmpty && input.contains(t) {
                     logAI("  ✅ 触发词命中: \(skill.name) (匹配 \"\(t)\")", category: "Skill")
-                    matched.append((skill.name, "触发词「\(t)」"))
-                    hit = true
+                    matched.append(skill.name)
                     break
                 }
             }
-            if !hit {
-                logAI("  ❌ 未命中: \(skill.name)", category: "Skill")
-            }
         }
 
-        guard !matched.isEmpty else {
+        if matched.isEmpty {
             logAI("🔍 硬匹配结果: 无命中", category: "Skill")
-            return nil
+        } else {
+            logAI("🎯 硬匹配结果: \(matched.joined(separator: ", "))", category: "Skill")
         }
-        let summary = matched.map { "「\($0.name)」(\($0.reason))" }.joined(separator: "、")
-        logAI("🎯 硬匹配结果: \(summary)", category: "Skill")
-        let names = matched.map { "「\($0.name)」" }.joined(separator: "、")
-        return "⚡ 检测到用户输入匹配以下 skill: \(names)。你必须（MUST）先使用 Skill 工具加载对应 skill 的完整指令，然后再回答用户。"
+        return matched
+    }
+
+    /// 兼容：返回提示文本（保留给其他调用者）
+    static func matchedSkillHints(for userInput: String, skills: [SkillMeta]? = nil) -> String? {
+        let names = matchedSkillNames(for: userInput, skills: skills)
+        guard !names.isEmpty else { return nil }
+        let formatted = names.map { "「\($0)」" }.joined(separator: "、")
+        return "检测到用户输入匹配以下 skill: \(formatted)"
     }
 
     /// 从 SKILL.md frontmatter 提取 trigger 列表

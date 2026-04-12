@@ -68,7 +68,7 @@ struct LogView: View {
                 Spacer()
                 Button("清空") { logManager.clear() }
                 Button("复制全部") {
-                    let text = logManager.logs.map { "[\($0.formattedTime)][\($0.level.rawValue)][\($0.category)] \($0.message)" }.joined(separator: "\n")
+                    let text = logManager.logs.map { formatLogLine($0) }.joined(separator: "\n")
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(text, forType: .string)
                 }
@@ -78,49 +78,107 @@ struct LogView: View {
 
             Divider()
 
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 2) {
-                        ForEach(logManager.logs) { entry in
-                            HStack(alignment: .top, spacing: 4) {
-                                Text(entry.formattedTime)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundStyle(.tertiary)
-                                Text("[\(entry.level.rawValue)]")
-                                    .font(.system(.caption, design: .monospaced))
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(levelColor(entry.level))
-                                Text("[\(entry.category)]")
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundStyle(.secondary)
-                                Text(entry.message)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .textSelection(.enabled)
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .id(entry.id)
-                        }
-                    }
-                }
-                .onChange(of: logManager.logs.count) {
-                    if autoScroll, let last = logManager.logs.last {
-                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
-                    }
-                }
-            }
+            LogTextView(logs: logManager.logs, autoScroll: autoScroll)
         }
         .background(Color(NSColor.textBackgroundColor))
     }
 
-    private func levelColor(_ level: LogManager.LogLevel) -> Color {
+    private func formatLogLine(_ entry: LogManager.LogEntry) -> String {
+        "\(entry.formattedTime) [\(entry.level.rawValue)] [\(entry.category)] \(entry.message)"
+    }
+}
+
+// MARK: - NSTextView wrapper for selectable log
+
+struct LogTextView: NSViewRepresentable {
+    let logs: [LogManager.LogEntry]
+    let autoScroll: Bool
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        let textView = NSTextView()
+
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.isRichText = true
+        textView.backgroundColor = .textBackgroundColor
+        textView.textContainerInset = NSSize(width: 8, height: 8)
+        textView.autoresizingMask = [.width]
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.textContainer?.widthTracksTextView = true
+
+        scrollView.documentView = textView
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+
+        context.coordinator.textView = textView
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let textView = context.coordinator.textView else { return }
+
+        let attrText = NSMutableAttributedString()
+        let font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        let boldFont = NSFont.monospacedSystemFont(ofSize: 11, weight: .semibold)
+
+        for (i, entry) in logs.enumerated() {
+            if i > 0 {
+                attrText.append(NSAttributedString(string: "\n"))
+            }
+
+            // Timestamp
+            attrText.append(NSAttributedString(string: "\(entry.formattedTime) ", attributes: [
+                .font: font,
+                .foregroundColor: NSColor.tertiaryLabelColor
+            ]))
+
+            // Level
+            attrText.append(NSAttributedString(string: "[\(entry.level.rawValue)] ", attributes: [
+                .font: boldFont,
+                .foregroundColor: nsLevelColor(entry.level)
+            ]))
+
+            // Category
+            attrText.append(NSAttributedString(string: "[\(entry.category)] ", attributes: [
+                .font: font,
+                .foregroundColor: NSColor.secondaryLabelColor
+            ]))
+
+            // Message
+            attrText.append(NSAttributedString(string: entry.message, attributes: [
+                .font: font,
+                .foregroundColor: NSColor.labelColor
+            ]))
+        }
+
+        // Only update if content changed
+        if attrText.length != context.coordinator.lastLength {
+            textView.textStorage?.setAttributedString(attrText)
+            context.coordinator.lastLength = attrText.length
+
+            if autoScroll {
+                textView.scrollToEndOfDocument(nil)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    class Coordinator {
+        weak var textView: NSTextView?
+        var lastLength = 0
+    }
+
+    private func nsLevelColor(_ level: LogManager.LogLevel) -> NSColor {
         switch level {
-        case .debug: return .secondary
-        case .info: return .blue
-        case .tool: return .purple
-        case .ai: return .cyan
-        case .warning: return .orange
-        case .error: return .red
+        case .debug: return .secondaryLabelColor
+        case .info: return .systemBlue
+        case .tool: return .systemPurple
+        case .ai: return .systemTeal
+        case .warning: return .systemOrange
+        case .error: return .systemRed
         }
     }
 }
