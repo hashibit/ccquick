@@ -12,7 +12,18 @@ class APIClient {
         workDir: String
     ) async throws -> String {
         // 动态发现已安装的 skills（渐进式披露第一层）
-        let skillsDescription = SkillRegistry.installedSkillsDescription()
+        let skills = SkillRegistry.installedSkills()
+        logAI("📦 已发现 \(skills.count) 个已安装 skill", category: "Skill")
+        for skill in skills {
+            if skill.triggers.isEmpty {
+                logAI("  - \(skill.name): \(skill.description)", category: "Skill")
+            } else {
+                logAI("  - \(skill.name): \(skill.description) [triggers: \(skill.triggers.joined(separator: ", "))]", category: "Skill")
+            }
+        }
+        let skillsDescription = SkillRegistry.formatSkillsDescription(skills)
+        // 硬匹配：根据用户输入检测可能相关的 skill
+        let skillHint = SkillRegistry.matchedSkillHints(for: prompt, skills: skills)
         let systemPrompt = """
         你是一个智能助手，通过调用工具来完成任务。
 
@@ -21,8 +32,9 @@ class APIClient {
         - 不要读取或修改工作目录以外的任何文件
         - Bash 命令应始终在当前目录或其子目录中操作
 
-        已安装的 skills 列表如下。当用户的请求匹配某个 skill 的描述时，使用 Skill 工具加载其完整指令后再执行：
+        已安装的 skills 列表如下。当用户的请求中提到了某个 skill 的名称或触发词，或请求内容与 skill 描述相关时，必须（MUST）先使用 Skill 工具加载该 skill 的完整指令，然后再执行：
         \(skillsDescription)
+        \(skillHint)
         """
 
         var messages: [[String: Any]] = [
@@ -427,23 +439,129 @@ private enum SkillRegistry {
             .appendingPathComponent("skills")
     }
 
-    /// 扫描已安装的 skills，返回名称+描述列表
-    static func installedSkillsDescription() -> String {
-        let skillsDir = skillsDir()
-        guard let items = try? FileManager.default.contentsOfDirectory(atPath: skillsDir.path) else {
-            return "（无已安装 skill）"
+    /// 每个 skill 的元数据（名称、描述、触发词）
+    struct SkillMeta {
+        let name: String
+        let description: String
+        let triggers: [String]
+    }
+
+    /// 扫描已安装的 skills，返回元数据列表
+    static func installedSkills() -> [SkillMeta] {
+        let dir = skillsDir()
+        logAI("🔎 扫描 skills 目录: \(dir.path)", category: "Skill")
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else {
+            logAI("⚠️ 无法读取 skills 目录", category: "Skill")
+            return []
         }
 
-        var lines: [String] = []
-        for name in items.sorted() {
-            let skillMd = skillsDir.appendingPathComponent(name).appendingPathComponent("SKILL.md")
-            if let content = try? String(contentsOfFile: skillMd.path, encoding: .utf8),
-               let desc = extractDescription(from: content) {
-                lines.append("- \(name): \(desc)")
+        let candidates = items.filter { !$0.hasPrefix(".") }.sorted()
+        logAI("📂 发现 \(candidates.count) 个候选目录", category: "Skill")
+
+        var skills: [SkillMeta] = []
+        for name in candidates {
+            let skillMd = dir.appendingPathComponent(name).appendingPathComponent("SKILL.md")
+            guard let content = try? String(contentsOfFile: skillMd.path, encoding: .utf8) else {
+                logAI("  ⏭️ \(name): 无 SKILL.md，跳过", category: "Skill")
+                continue
+            }
+            guard let desc = extractDescription(from: content) else {
+                logAI("  ⏭️ \(name): 无 description，跳过", category: "Skill")
+                continue
+            }
+            let triggers = extractTriggers(from: content)
+            logAI("  ✅ \(name): desc=\(desc.prefix(60))... triggers=\(triggers)", category: "Skill")
+            skills.append(SkillMeta(name: name, description: desc, triggers: triggers))
+        }
+        logAI("📦 共加载 \(skills.count) 个有效 skill", category: "Skill")
+        return skills
+    }
+
+    /// 格式化 skill 列表（接受预加载的 skills）
+    static func formatSkillsDescription(_ skills: [SkillMeta]) -> String {
+        guard !skills.isEmpty else { return "（无已安装 skill）" }
+
+        let lines = skills.map { skill in
+            if skill.triggers.isEmpty {
+                return "- \(skill.name): \(skill.description)"
+            } else {
+                return "- \(skill.name): \(skill.description) [触发词: \(skill.triggers.joined(separator: ", "))]"
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// 兼容旧调用
+    static func installedSkillsDescription() -> String {
+        formatSkillsDescription(installedSkills())
+    }
+
+    /// 根据用户输入硬匹配触发词，返回命中的 skill 提示（方案 3）
+    static func matchedSkillHints(for userInput: String, skills: [SkillMeta]? = nil) -> String? {
+        let allSkills = skills ?? installedSkills()
+        let input = userInput.lowercased()
+        logAI("🔍 硬匹配输入: \"\(input.prefix(80))\"", category: "Skill")
+
+        var matched: [(name: String, reason: String)] = []
+        for skill in allSkills {
+            // 匹配 skill 名称
+            let nameLower = skill.name.lowercased()
+            if input.contains(nameLower) {
+                logAI("  ✅ 名称命中: \(skill.name) (匹配 \"\(nameLower)\")", category: "Skill")
+                matched.append((skill.name, "名称"))
+                continue
+            }
+            // 匹配触发词
+            var hit = false
+            for trigger in skill.triggers {
+                let t = trigger.trimmingCharacters(in: .whitespaces).lowercased()
+                if !t.isEmpty && input.contains(t) {
+                    logAI("  ✅ 触发词命中: \(skill.name) (匹配 \"\(t)\")", category: "Skill")
+                    matched.append((skill.name, "触发词「\(t)」"))
+                    hit = true
+                    break
+                }
+            }
+            if !hit {
+                logAI("  ❌ 未命中: \(skill.name)", category: "Skill")
             }
         }
 
-        return lines.isEmpty ? "（无已安装 skill）" : lines.joined(separator: "\n")
+        guard !matched.isEmpty else {
+            logAI("🔍 硬匹配结果: 无命中", category: "Skill")
+            return nil
+        }
+        let summary = matched.map { "「\($0.name)」(\($0.reason))" }.joined(separator: "、")
+        logAI("🎯 硬匹配结果: \(summary)", category: "Skill")
+        let names = matched.map { "「\($0.name)」" }.joined(separator: "、")
+        return "⚡ 检测到用户输入匹配以下 skill: \(names)。你必须（MUST）先使用 Skill 工具加载对应 skill 的完整指令，然后再回答用户。"
+    }
+
+    /// 从 SKILL.md frontmatter 提取 trigger 列表
+    private static func extractTriggers(from content: String) -> [String] {
+        guard content.hasPrefix("---") else { return [] }
+        let parts = content.dropFirst(3).split(separator: "---", maxSplits: 1)
+        guard parts.count >= 2 else { return [] }
+
+        let frontmatter = String(parts[0])
+
+        // 匹配 YAML 数组格式: trigger:\n  - "xxx"\n  - "yyy"
+        let pattern = #"(?m)^trigger:\s*\n((?:\s+-\s*.+\n?)+)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: frontmatter, range: NSRange(frontmatter.startIndex..., in: frontmatter)),
+              let range = Range(match.range(at: 1), in: frontmatter) else {
+            return []
+        }
+
+        let block = String(frontmatter[range])
+        // 逐行提取 - "value" 或 - value
+        let itemPattern = #"(?m)^\s+-\s*"?([^"\n]+)"?\s*$"#
+        guard let itemRegex = try? NSRegularExpression(pattern: itemPattern) else { return [] }
+        let matches = itemRegex.matches(in: block, range: NSRange(block.startIndex..., in: block))
+        return matches.compactMap { m in
+            guard let r = Range(m.range(at: 1), in: block) else { return nil }
+            return String(block[r]).trimmingCharacters(in: .whitespaces)
+        }
     }
 
     /// 从 SKILL.md frontmatter 提取 description
