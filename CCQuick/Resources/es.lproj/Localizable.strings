@@ -1,0 +1,94 @@
+/* Menu */
+"menu.invoke" = "Invocar…";
+"menu.sessions" = "Sesiones…";
+"menu.settings" = "Ajustes…";
+"menu.quit" = "Salir de CCQuick";
+"menu.running_count" = "En ejecución (%d)";
+"menu.unviewed_count" = "Completadas, sin leer (%d)";
+
+/* Log Window */
+"log.title" = "Registros";
+"log.auto_scroll" = "Desplazamiento auto";
+"log.clear" = "Limpiar";
+"log.copy_all" = "Copiar todo";
+
+/* Input */
+"input.placeholder" = "Ingrese una tarea, presione Return para enviar...";
+
+/* Sessions */
+"sessions.title" = "Sesiones";
+"sessions.search" = "Buscar";
+"sessions.delete" = "Eliminar";
+"sessions.delete_help" = "Eliminar tarea seleccionada";
+"sessions.select_record" = "Seleccione una sesión";
+"sessions.create_hint" = "o presione %@ para crear una tarea";
+"sessions.new" = "Nueva";
+
+/* Task */
+"task.detail_title" = "Detalles de la tarea";
+"task.stop" = "Detener";
+"task.stop_help" = "Detener tarea actual";
+"task.copy" = "Copiar";
+"task.copy_help" = "Copiar respuesta";
+"task.folder" = "Carpeta";
+"task.folder_help" = "Abrir directorio de trabajo";
+"task.typing" = "Escribiendo...";
+"task.follow_up" = "Pregunta adicional...";
+"task.send" = "Enviar";
+"task.no_output" = "(Sin salida)";
+"task.elapsed" = "Duración %@";
+"task.fallback_name" = "Tarea";
+
+/* Status */
+"status.completed" = "Completada";
+"status.failed" = "Fallida";
+"status.running" = "En ejecución";
+"status.stopped" = "Detenida";
+"status.running_ellipsis" = "En ejecución...";
+"status.no_content" = "Sin contenido";
+
+/* Task Groups */
+"group.all" = "Todas";
+"group.running" = "En ejecución";
+"group.completed" = "Completadas";
+"group.failed" = "Fallidas";
+"group.stopped" = "Detenidas";
+
+/* Notifications */
+"notification.completed" = "Tarea completada";
+"notification.completed_body" = "La tarea ha sido completada";
+
+/* Settings */
+"settings.title" = "Ajustes";
+"settings.engine" = "Motor de ejecución";
+"settings.account" = "Cuenta";
+"settings.api_key_placeholder" = "Ingrese API Key";
+"settings.api_key_hint" = "Compatible: Kimi, Tongyi Qianwen, DeepSeek, Zhipu, Bailian, etc.";
+"settings.claude_hint" = "Usa la configuración de Claude CLI conectada";
+"settings.checking" = "Verificando...";
+"settings.check_availability" = "Verificar disponibilidad";
+"settings.hotkey" = "Atajos";
+"settings.open_input" = "Abrir ventana de entrada";
+"settings.open_sessions" = "Abrir sesiones";
+"settings.open_settings" = "Abrir ajustes";
+"settings.menu_label" = "Menú";
+"settings.behavior" = "Comportamiento";
+"settings.notifications" = "Activar notificaciones";
+"settings.appearance" = "Apariencia";
+"settings.theme" = "Tema";
+"settings.press_hotkey" = "Presione un nuevo atajo...";
+"settings.api_key_empty" = "Ingrese una API Key";
+"settings.using_cli" = "Usando configuración de Claude CLI";
+
+/* Appearance */
+"appearance.system" = "Sistema";
+"appearance.light" = "Claro";
+"appearance.dark" = "Oscuro";
+
+/* Execution Account */
+"account.claude" = "Suscripción Claude";
+"account.coding_plan" = "Suscripción CodingPlan";
+
+/* Toolbar */
+"toolbar.copy_plain" = "Copiar texto";
+"toolbar.copy_markdown" = "Copiar Markdown";

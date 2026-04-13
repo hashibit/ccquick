@@ -12,13 +12,23 @@ extension Notification.Name {
 // MARK: - Task Group
 
 enum TaskGroup: String, CaseIterable, Identifiable {
-    case all = "全部"
-    case running = "运行中"
-    case completed = "已完成"
-    case failed = "失败"
-    case stopped = "已停止"
+    case all
+    case running
+    case completed
+    case failed
+    case stopped
 
     var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .all: return L10n.groupAll
+        case .running: return L10n.groupRunning
+        case .completed: return L10n.groupCompleted
+        case .failed: return L10n.groupFailed
+        case .stopped: return L10n.groupStopped
+        }
+    }
 
     var icon: String {
         switch self {
@@ -150,10 +160,10 @@ struct TaskStatusLabel: View {
 
     private func statusConfig() -> (text: String, icon: String, color: Color) {
         switch task.status {
-        case .completed: return ("已完成", "checkmark.circle.fill", .green)
-        case .failed: return ("失败", "xmark.circle.fill", .red)
-        case .running: return ("运行中", "arrow.clockwise", .blue)
-        case .stopped: return ("已停止", "hand.raised.fill", .orange)
+        case .completed: return (L10n.statusCompleted, "checkmark.circle.fill", .green)
+        case .failed: return (L10n.statusFailed, "xmark.circle.fill", .red)
+        case .running: return (L10n.statusRunning, "arrow.clockwise", .blue)
+        case .stopped: return (L10n.statusStopped, "hand.raised.fill", .orange)
         }
     }
 }
@@ -170,7 +180,7 @@ struct MessageToolbar: View {
         HStack(spacing: 6) {
             toolbarButton(
                 icon: "doc.on.doc",
-                tooltip: "复制原文",
+                tooltip: L10n.toolbarCopyPlain,
                 isHovering: isHoveringCopy
             ) {
                 isHoveringCopy = true
@@ -182,7 +192,7 @@ struct MessageToolbar: View {
             if !content.isEmpty {
                 toolbarButton(
                     icon: "chevron.left.forwardslash.chevron.right",
-                    tooltip: "复制 Markdown",
+                    tooltip: L10n.toolbarCopyMarkdown,
                     isHovering: isHoveringMarkdown
                 ) {
                     isHoveringMarkdown = true

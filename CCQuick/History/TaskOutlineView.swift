@@ -248,13 +248,13 @@ struct TaskOutlineViewWrapper: NSViewRepresentable {
 
             if let previewField = cell?.viewWithIdentifier("Preview") as? NSTextField {
                 if task.status == .running {
-                    previewField.stringValue = "运行中..."
+                    previewField.stringValue = L10n.statusRunningEllipsis
                     previewField.font = NSFont.preferredFont(forTextStyle: .caption1)
                     previewField.textColor = NSColor.systemBlue
                 } else {
                     let lastResponse = TaskStore.shared.getLastResponse(id: task.id) ?? ""
                     let preview = String(lastResponse.prefix(60)).replacingOccurrences(of: "\n", with: " ")
-                    previewField.stringValue = preview.isEmpty ? "无内容" : preview
+                    previewField.stringValue = preview.isEmpty ? L10n.statusNoContent : preview
                     previewField.font = NSFont.preferredFont(forTextStyle: .caption1)
                     previewField.textColor = NSColor.secondaryLabelColor
                 }

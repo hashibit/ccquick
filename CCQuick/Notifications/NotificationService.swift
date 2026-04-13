@@ -21,7 +21,7 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         if let userMsg = lastUserMsg {
             content.title = String(userMsg.content.prefix(80))
         } else {
-            content.title = "任务完成"
+            content.title = L10n.notificationCompleted
         }
 
         if let assistantMsg = lastAssistantMsg {
@@ -29,7 +29,7 @@ class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         } else if let resp = response {
             content.body = shortResponse(resp)
         } else {
-            content.body = "任务已完成"
+            content.body = L10n.notificationCompletedBody
         }
 
         content.sound = .default

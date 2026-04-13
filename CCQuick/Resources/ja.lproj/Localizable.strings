@@ -1,0 +1,94 @@
+/* Menu */
+"menu.invoke" = "呼び出す…";
+"menu.sessions" = "セッション…";
+"menu.settings" = "設定…";
+"menu.quit" = "CCQuick を終了";
+"menu.running_count" = "実行中 (%d)";
+"menu.unviewed_count" = "完了・未確認 (%d)";
+
+/* Log Window */
+"log.title" = "ログ";
+"log.auto_scroll" = "自動スクロール";
+"log.clear" = "クリア";
+"log.copy_all" = "すべてコピー";
+
+/* Input */
+"input.placeholder" = "タスクを入力し、Returnで送信...";
+
+/* Sessions */
+"sessions.title" = "セッション";
+"sessions.search" = "検索";
+"sessions.delete" = "削除";
+"sessions.delete_help" = "選択したタスクを削除";
+"sessions.select_record" = "セッションを選択";
+"sessions.create_hint" = "%@ で新しいタスクを作成";
+"sessions.new" = "新規";
+
+/* Task */
+"task.detail_title" = "タスク詳細";
+"task.stop" = "停止";
+"task.stop_help" = "現在のタスクを停止";
+"task.copy" = "コピー";
+"task.copy_help" = "回答をコピー";
+"task.folder" = "フォルダ";
+"task.folder_help" = "作業ディレクトリを開く";
+"task.typing" = "入力中...";
+"task.follow_up" = "追加質問...";
+"task.send" = "送信";
+"task.no_output" = "（出力なし）";
+"task.elapsed" = "所要時間 %@";
+"task.fallback_name" = "タスク";
+
+/* Status */
+"status.completed" = "完了";
+"status.failed" = "失敗";
+"status.running" = "実行中";
+"status.stopped" = "停止済み";
+"status.running_ellipsis" = "実行中...";
+"status.no_content" = "内容なし";
+
+/* Task Groups */
+"group.all" = "すべて";
+"group.running" = "実行中";
+"group.completed" = "完了";
+"group.failed" = "失敗";
+"group.stopped" = "停止済み";
+
+/* Notifications */
+"notification.completed" = "タスク完了";
+"notification.completed_body" = "タスクが完了しました";
+
+/* Settings */
+"settings.title" = "設定";
+"settings.engine" = "実行エンジン";
+"settings.account" = "アカウント";
+"settings.api_key_placeholder" = "API Keyを入力";
+"settings.api_key_hint" = "対応：Kimi、通義千問、DeepSeek、智譜、百錬など";
+"settings.claude_hint" = "ログイン済みのClaude CLI設定を使用";
+"settings.checking" = "確認中...";
+"settings.check_availability" = "可用性を確認";
+"settings.hotkey" = "ショートカット";
+"settings.open_input" = "入力ウィンドウを開く";
+"settings.open_sessions" = "セッションを開く";
+"settings.open_settings" = "設定を開く";
+"settings.menu_label" = "メニュー";
+"settings.behavior" = "動作";
+"settings.notifications" = "通知を有効化";
+"settings.appearance" = "外観";
+"settings.theme" = "テーマ";
+"settings.press_hotkey" = "新しいキーを押す...";
+"settings.api_key_empty" = "API Keyを入力してください";
+"settings.using_cli" = "Claude CLI設定を使用";
+
+/* Appearance */
+"appearance.system" = "システム";
+"appearance.light" = "ライト";
+"appearance.dark" = "ダーク";
+
+/* Execution Account */
+"account.claude" = "Claude サブスクリプション";
+"account.coding_plan" = "CodingPlan サブスクリプション";
+
+/* Toolbar */
+"toolbar.copy_plain" = "テキストをコピー";
+"toolbar.copy_markdown" = "Markdownをコピー";

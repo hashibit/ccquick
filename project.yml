@@ -4,6 +4,16 @@ options:
   deploymentTarget:
     macOS: "14.0"
   xcodeVersion: "16"
+  developmentLanguage: zh-Hans
+  knownRegions:
+    - zh-Hans
+    - en
+    - ja
+    - ko
+    - fr
+    - de
+    - es
+    - pt-BR
 
 packages:
   MarkdownUI:

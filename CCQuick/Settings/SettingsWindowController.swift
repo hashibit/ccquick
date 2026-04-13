@@ -22,7 +22,7 @@ class SettingsWindowController: NSObject {
                 backing: .buffered,
                 defer: false
             )
-            newWindow.title = "设置"
+            newWindow.title = L10n.settingsTitle
             newWindow.center()
             newWindow.minSize = NSSize(width: 500, height: 400)
             newWindow.contentView = hostingView

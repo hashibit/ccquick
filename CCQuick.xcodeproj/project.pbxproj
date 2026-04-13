@@ -11,6 +11,7 @@
 		0C681F96BD799781ECCB4300 /* TaskStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2858375BE4860101DC26B4DD /* TaskStoreTests.swift */; };
 		2DD8ACE25F798FE96FE36341 /* HistoryWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89F00944B5FD9E17B96D58A0 /* HistoryWindowController.swift */; };
 		2F73F928E44E34CC77A7F681 /* TaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9311F5FF47E49DF29E7A25D /* TaskManager.swift */; };
+		3BB2BEB2ABFDA343298630DE /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8F03CC308C5153BF95CA16A /* L10n.swift */; };
 		3FFC7EEC44AB9516B2008020 /* CodingPlanProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB0C92AD406545D9DA796D1 /* CodingPlanProviderTests.swift */; };
 		415C7FF1F0213EE303F274D4 /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67685A0433F1C88ED5808D0F /* Task.swift */; };
 		4C008197C9657BE2B762E188 /* TaskGroupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF63A4A51E26E0E304C3E7DB /* TaskGroupTests.swift */; };
@@ -20,6 +21,7 @@
 		74B297D9C9042905A391DB66 /* TaskRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4580BB3290766584AAB5B5F6 /* TaskRunner.swift */; };
 		7A3146DB633404AAD5F37AED /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F8217322D181ED222D7BFF6 /* TaskStore.swift */; };
 		8080EAED8F2BD485148C5FF0 /* TaskOutlineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07E5EDB4E4472F950F85BAF5 /* TaskOutlineView.swift */; };
+		86DD732C795A5D9339EC1ACC /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4E6FAC20A80918B18B45D1AF /* Localizable.strings */; };
 		88913950714EB5F115F704FB /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2F169FAB862697BE27D3A1B /* APIClient.swift */; };
 		98556A8DDB915A6CC832452B /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2A3C9F212DF4CF21A56CFD2 /* HistoryView.swift */; };
 		AF53E117A503F326E3A3989A /* CCTaskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A4BC99A6C81E6E7BE819314 /* CCTaskTests.swift */; };
@@ -48,8 +50,11 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		05EA06D3092109E1152DBEF9 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/Localizable.strings; sourceTree = "<group>"; };
+		073B90AE00866462453AEC5F /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
 		07E5EDB4E4472F950F85BAF5 /* TaskOutlineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskOutlineView.swift; sourceTree = "<group>"; };
 		091A9EBDD912CD23E9F5443C /* StatusItemController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemController.swift; sourceTree = "<group>"; };
+		18BA1F1D3CD62BF735E24AB1 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		2858375BE4860101DC26B4DD /* TaskStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStoreTests.swift; sourceTree = "<group>"; };
 		2A3D93CF4A90F869F6F3D6C8 /* CCQuick.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CCQuick.entitlements; sourceTree = "<group>"; };
 		3FFBF6BD3840F928C782F59E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -63,10 +68,12 @@
 		67685A0433F1C88ED5808D0F /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
 		6BD072D31AF098F670540CB8 /* ChatComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComponents.swift; sourceTree = "<group>"; };
 		6F8217322D181ED222D7BFF6 /* TaskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStore.swift; sourceTree = "<group>"; };
+		7DAB020D481F17A54CCF2755 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		7F38E55CD395D3FB37D9C481 /* CCQuickApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CCQuickApp.swift; sourceTree = "<group>"; };
 		810E98EFD67B7132109D0AA2 /* InputWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputWindowController.swift; sourceTree = "<group>"; };
 		89F00944B5FD9E17B96D58A0 /* HistoryWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWindowController.swift; sourceTree = "<group>"; };
 		9A4BC99A6C81E6E7BE819314 /* CCTaskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CCTaskTests.swift; sourceTree = "<group>"; };
+		9D38B327A4CFD3C32672B6AD /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 		A2A3C9F212DF4CF21A56CFD2 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		A2F169FAB862697BE27D3A1B /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		A64A3CC5BCC6AE700C37CFDF /* CCQuickTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CCQuickTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -76,8 +83,12 @@
 		C1F24BDFE35F0656A3E58CD6 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		CBBC7491CFCBBC7CC6ED3E42 /* ResultWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultWindowController.swift; sourceTree = "<group>"; };
 		CD140A39950702D107F95492 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		D4E965E4E1F11C67B41E3331 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		D9F8326F7723CCD7421AEA28 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		E8AD94028D076BC1CF43CD7E /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
+		F2FB8F915282D62C996795B5 /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-BR"; path = "pt-BR.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		F89B269A46F2AE2F9B94E356 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F8F03CC308C5153BF95CA16A /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		FF63A4A51E26E0E304C3E7DB /* TaskGroupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskGroupTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -106,6 +117,7 @@
 			children = (
 				3FFBF6BD3840F928C782F59E /* Assets.xcassets */,
 				F89B269A46F2AE2F9B94E356 /* Info.plist */,
+				4E6FAC20A80918B18B45D1AF /* Localizable.strings */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -201,6 +213,7 @@
 				5C0825C6CF7BEF8997939F65 /* App */,
 				8E3ED3441DEA260F7A8D7BFE /* History */,
 				F63323D94EEEB850B4141148 /* InputWindow */,
+				C1A8DBC7D971C4D8027AEB1D /* Localization */,
 				307968C135879EAEF92AA67C /* MenuBar */,
 				02581FC041F69F77502FD55B /* Notifications */,
 				1E85CA991E13B4DF58A2266A /* Resources */,
@@ -238,6 +251,14 @@
 				6F8217322D181ED222D7BFF6 /* TaskStore.swift */,
 			);
 			path = Task;
+			sourceTree = "<group>";
+		};
+		C1A8DBC7D971C4D8027AEB1D /* Localization */ = {
+			isa = PBXGroup;
+			children = (
+				F8F03CC308C5153BF95CA16A /* L10n.swift */,
+			);
+			path = Localization;
 			sourceTree = "<group>";
 		};
 		D8D017CCDD46660D2684457E /* Products */ = {
@@ -317,11 +338,18 @@
 				};
 			};
 			buildConfigurationList = A298479D76548C12830A0A98 /* Build configuration list for PBXProject "CCQuick" */;
-			developmentRegion = en;
+			developmentRegion = "zh-Hans";
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
+				de,
 				en,
+				es,
+				fr,
+				ja,
+				ko,
+				"pt-BR",
+				"zh-Hans",
 			);
 			mainGroup = A628D6378DFEC4F06177470D;
 			minimizedProjectReferenceProxies = 1;
@@ -345,6 +373,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F71EB1AA7F3CF07F8C3D26C5 /* Assets.xcassets in Resources */,
+				86DD732C795A5D9339EC1ACC /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -363,6 +392,7 @@
 				2DD8ACE25F798FE96FE36341 /* HistoryWindowController.swift in Sources */,
 				5E5FF0D7198CECFA4C8BB3C5 /* InputView.swift in Sources */,
 				5719E430A743E1BAC8330184 /* InputWindowController.swift in Sources */,
+				3BB2BEB2ABFDA343298630DE /* L10n.swift in Sources */,
 				56F7B071F8C83AAA53276D83 /* NotificationService.swift in Sources */,
 				BFB56FB996981E38A1B111BD /* ResultWindowController.swift in Sources */,
 				E903393B65AA74B2FE6572CE /* SettingsStore.swift in Sources */,
@@ -400,6 +430,24 @@
 			targetProxy = 92E0FECAA054C8E14C4B3CF1 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		4E6FAC20A80918B18B45D1AF /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				18BA1F1D3CD62BF735E24AB1 /* de */,
+				7DAB020D481F17A54CCF2755 /* en */,
+				073B90AE00866462453AEC5F /* es */,
+				05EA06D3092109E1152DBEF9 /* fr */,
+				9D38B327A4CFD3C32672B6AD /* ja */,
+				E8AD94028D076BC1CF43CD7E /* ko */,
+				F2FB8F915282D62C996795B5 /* pt-BR */,
+				D4E965E4E1F11C67B41E3331 /* zh-Hans */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		0FCB7DD613EAB5B0B4207783 /* Release */ = {

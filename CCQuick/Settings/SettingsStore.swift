@@ -77,8 +77,8 @@ enum ExecutionAccount: String, Codable, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .claudeSubscription: return "默认 Claude 订阅"
-        case .codingPlan: return "CodingPlan 订阅"
+        case .claudeSubscription: return L10n.accountClaude
+        case .codingPlan: return L10n.accountCodingPlan
         }
     }
 }
@@ -91,9 +91,9 @@ enum AppAppearance: String, Codable, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .system: return "跟随系统"
-        case .light: return "浅色"
-        case .dark: return "深色"
+        case .system: return L10n.appearanceSystem
+        case .light: return L10n.appearanceLight
+        case .dark: return L10n.appearanceDark
         }
     }
 
@@ -250,7 +250,7 @@ class AvailabilityChecker: ObservableObject {
         // Claude 订阅不需要检测，直接显示成功
         logInfo("使用 Claude CLI 默认配置", category: "Check")
         isChecking = false
-        result = CheckResult(success: true, message: "使用 Claude CLI 配置", providerName: "Claude CLI")
+        result = CheckResult(success: true, message: L10n.settingsUsingCli, providerName: "Claude CLI")
     }
 
     func checkCodingPlan(apiKey: String) {
@@ -272,7 +272,7 @@ class AvailabilityChecker: ObservableObject {
         let trimmedKey = apiKey.trimmingCharacters(in: .whitespaces)
         guard !trimmedKey.isEmpty else {
             logWarning("API Key 为空", category: "Check")
-            return CheckResult(success: false, message: "请输入 API Key", providerName: nil)
+            return CheckResult(success: false, message: L10n.settingsApiKeyEmpty, providerName: nil)
         }
 
         let providers = CodingPlanProvider.matchProviders(for: trimmedKey)

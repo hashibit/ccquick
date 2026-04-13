@@ -16,7 +16,7 @@ struct InputView: View {
 
             // 输入框 - 使用 FocusableTextField 确保 NSPanel 中能获得焦点
             FocusableTextField(
-                placeholder: "输入任务，按回车发送...",
+                placeholder: L10n.inputPlaceholder,
                 text: $text,
                 onSubmit: {
                     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)

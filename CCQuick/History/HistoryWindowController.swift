@@ -56,7 +56,7 @@ class TaskDetailWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "任务详情"
+        window.title = L10n.taskDetailTitle
         window.center()
         window.minSize = NSSize(width: 500, height: 400)
         window.contentView = NSHostingView(rootView: TaskDetailWindowView(taskId: taskId))

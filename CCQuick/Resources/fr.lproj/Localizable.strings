@@ -1,0 +1,94 @@
+/* Menu */
+"menu.invoke" = "Invoquer…";
+"menu.sessions" = "Sessions…";
+"menu.settings" = "Réglages…";
+"menu.quit" = "Quitter CCQuick";
+"menu.running_count" = "En cours (%d)";
+"menu.unviewed_count" = "Terminées, non lues (%d)";
+
+/* Log Window */
+"log.title" = "Journaux";
+"log.auto_scroll" = "Défilement auto";
+"log.clear" = "Effacer";
+"log.copy_all" = "Tout copier";
+
+/* Input */
+"input.placeholder" = "Saisissez une tâche, appuyez sur Entrée...";
+
+/* Sessions */
+"sessions.title" = "Sessions";
+"sessions.search" = "Rechercher";
+"sessions.delete" = "Supprimer";
+"sessions.delete_help" = "Supprimer la tâche sélectionnée";
+"sessions.select_record" = "Sélectionner une session";
+"sessions.create_hint" = "ou appuyez sur %@ pour créer une tâche";
+"sessions.new" = "Nouveau";
+
+/* Task */
+"task.detail_title" = "Détails de la tâche";
+"task.stop" = "Arrêter";
+"task.stop_help" = "Arrêter la tâche en cours";
+"task.copy" = "Copier";
+"task.copy_help" = "Copier la réponse";
+"task.folder" = "Dossier";
+"task.folder_help" = "Ouvrir le répertoire de travail";
+"task.typing" = "Saisie en cours...";
+"task.follow_up" = "Question de suivi...";
+"task.send" = "Envoyer";
+"task.no_output" = "(Aucune sortie)";
+"task.elapsed" = "Durée %@";
+"task.fallback_name" = "Tâche";
+
+/* Status */
+"status.completed" = "Terminée";
+"status.failed" = "Échouée";
+"status.running" = "En cours";
+"status.stopped" = "Arrêtée";
+"status.running_ellipsis" = "En cours...";
+"status.no_content" = "Aucun contenu";
+
+/* Task Groups */
+"group.all" = "Toutes";
+"group.running" = "En cours";
+"group.completed" = "Terminées";
+"group.failed" = "Échouées";
+"group.stopped" = "Arrêtées";
+
+/* Notifications */
+"notification.completed" = "Tâche terminée";
+"notification.completed_body" = "La tâche est terminée";
+
+/* Settings */
+"settings.title" = "Réglages";
+"settings.engine" = "Moteur d'exécution";
+"settings.account" = "Compte";
+"settings.api_key_placeholder" = "Saisir la clé API";
+"settings.api_key_hint" = "Compatible : Kimi, Tongyi Qianwen, DeepSeek, Zhipu, Bailian, etc.";
+"settings.claude_hint" = "Utilise la configuration Claude CLI connectée";
+"settings.checking" = "Vérification...";
+"settings.check_availability" = "Vérifier la disponibilité";
+"settings.hotkey" = "Raccourcis";
+"settings.open_input" = "Ouvrir la fenêtre de saisie";
+"settings.open_sessions" = "Ouvrir les sessions";
+"settings.open_settings" = "Ouvrir les réglages";
+"settings.menu_label" = "Menu";
+"settings.behavior" = "Comportement";
+"settings.notifications" = "Activer les notifications";
+"settings.appearance" = "Apparence";
+"settings.theme" = "Thème";
+"settings.press_hotkey" = "Appuyez sur un raccourci...";
+"settings.api_key_empty" = "Veuillez saisir une clé API";
+"settings.using_cli" = "Configuration Claude CLI utilisée";
+
+/* Appearance */
+"appearance.system" = "Système";
+"appearance.light" = "Clair";
+"appearance.dark" = "Sombre";
+
+/* Execution Account */
+"account.claude" = "Abonnement Claude";
+"account.coding_plan" = "Abonnement CodingPlan";
+
+/* Toolbar */
+"toolbar.copy_plain" = "Copier le texte";
+"toolbar.copy_markdown" = "Copier le Markdown";

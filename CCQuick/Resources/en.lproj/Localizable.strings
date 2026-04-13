@@ -1,0 +1,94 @@
+/* Menu */
+"menu.invoke" = "Invoke…";
+"menu.sessions" = "Sessions…";
+"menu.settings" = "Settings…";
+"menu.quit" = "Quit CCQuick";
+"menu.running_count" = "Running (%d)";
+"menu.unviewed_count" = "Completed, Unread (%d)";
+
+/* Log Window */
+"log.title" = "Logs";
+"log.auto_scroll" = "Auto Scroll";
+"log.clear" = "Clear";
+"log.copy_all" = "Copy All";
+
+/* Input */
+"input.placeholder" = "Enter a task, press Return to send...";
+
+/* Sessions */
+"sessions.title" = "Sessions";
+"sessions.search" = "Search";
+"sessions.delete" = "Delete";
+"sessions.delete_help" = "Delete selected task";
+"sessions.select_record" = "Select a session";
+"sessions.create_hint" = "or press %@ to create a new task";
+"sessions.new" = "New";
+
+/* Task */
+"task.detail_title" = "Task Details";
+"task.stop" = "Stop";
+"task.stop_help" = "Stop current task";
+"task.copy" = "Copy";
+"task.copy_help" = "Copy response";
+"task.folder" = "Folder";
+"task.folder_help" = "Open working directory";
+"task.typing" = "Typing...";
+"task.follow_up" = "Follow up...";
+"task.send" = "Send";
+"task.no_output" = "(No output)";
+"task.elapsed" = "Elapsed %@";
+"task.fallback_name" = "Task";
+
+/* Status */
+"status.completed" = "Completed";
+"status.failed" = "Failed";
+"status.running" = "Running";
+"status.stopped" = "Stopped";
+"status.running_ellipsis" = "Running...";
+"status.no_content" = "No content";
+
+/* Task Groups */
+"group.all" = "All";
+"group.running" = "Running";
+"group.completed" = "Completed";
+"group.failed" = "Failed";
+"group.stopped" = "Stopped";
+
+/* Notifications */
+"notification.completed" = "Task Completed";
+"notification.completed_body" = "Task has been completed";
+
+/* Settings */
+"settings.title" = "Settings";
+"settings.engine" = "Execution Engine";
+"settings.account" = "Account";
+"settings.api_key_placeholder" = "Enter API Key";
+"settings.api_key_hint" = "Supports: Kimi, Tongyi Qianwen, DeepSeek, Zhipu, Bailian, etc.";
+"settings.claude_hint" = "Uses logged-in Claude CLI configuration";
+"settings.checking" = "Checking...";
+"settings.check_availability" = "Check Availability";
+"settings.hotkey" = "Hotkeys";
+"settings.open_input" = "Open input window";
+"settings.open_sessions" = "Open sessions";
+"settings.open_settings" = "Open settings";
+"settings.menu_label" = "Menu";
+"settings.behavior" = "Behavior";
+"settings.notifications" = "Enable Notifications";
+"settings.appearance" = "Appearance";
+"settings.theme" = "Theme";
+"settings.press_hotkey" = "Press new hotkey...";
+"settings.api_key_empty" = "Please enter API Key";
+"settings.using_cli" = "Using Claude CLI configuration";
+
+/* Appearance */
+"appearance.system" = "System";
+"appearance.light" = "Light";
+"appearance.dark" = "Dark";
+
+/* Execution Account */
+"account.claude" = "Claude Subscription";
+"account.coding_plan" = "CodingPlan Subscription";
+
+/* Toolbar */
+"toolbar.copy_plain" = "Copy Plain Text";
+"toolbar.copy_markdown" = "Copy Markdown";

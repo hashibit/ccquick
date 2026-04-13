@@ -1,0 +1,94 @@
+/* Menu */
+"menu.invoke" = "唤起…";
+"menu.sessions" = "会话…";
+"menu.settings" = "设置…";
+"menu.quit" = "退出 CCQuick";
+"menu.running_count" = "正在执行 (%d)";
+"menu.unviewed_count" = "已完成，待查看 (%d)";
+
+/* Log Window */
+"log.title" = "日志";
+"log.auto_scroll" = "自动滚动";
+"log.clear" = "清空";
+"log.copy_all" = "复制全部";
+
+/* Input */
+"input.placeholder" = "输入任务，按回车发送...";
+
+/* Sessions */
+"sessions.title" = "会话";
+"sessions.search" = "搜索";
+"sessions.delete" = "删除";
+"sessions.delete_help" = "删除选中任务";
+"sessions.select_record" = "选择一条记录";
+"sessions.create_hint" = "或按 %@ 创建新任务";
+"sessions.new" = "新建";
+
+/* Task */
+"task.detail_title" = "任务详情";
+"task.stop" = "停止";
+"task.stop_help" = "停止当前任务";
+"task.copy" = "复制";
+"task.copy_help" = "复制回复内容";
+"task.folder" = "目录";
+"task.folder_help" = "打开工作目录";
+"task.typing" = "正在输入...";
+"task.follow_up" = "继续追问...";
+"task.send" = "发送";
+"task.no_output" = "（无输出）";
+"task.elapsed" = "耗时 %@";
+"task.fallback_name" = "任务";
+
+/* Status */
+"status.completed" = "已完成";
+"status.failed" = "失败";
+"status.running" = "运行中";
+"status.stopped" = "已停止";
+"status.running_ellipsis" = "运行中...";
+"status.no_content" = "无内容";
+
+/* Task Groups */
+"group.all" = "全部";
+"group.running" = "运行中";
+"group.completed" = "已完成";
+"group.failed" = "失败";
+"group.stopped" = "已停止";
+
+/* Notifications */
+"notification.completed" = "任务完成";
+"notification.completed_body" = "任务已完成";
+
+/* Settings */
+"settings.title" = "设置";
+"settings.engine" = "执行引擎";
+"settings.account" = "执行账户";
+"settings.api_key_placeholder" = "输入 API Key";
+"settings.api_key_hint" = "支持：Kimi、通义千问、DeepSeek、智谱、百炼等";
+"settings.claude_hint" = "使用已登录的 Claude CLI 配置";
+"settings.checking" = "检测中...";
+"settings.check_availability" = "检测可用性";
+"settings.hotkey" = "快捷键";
+"settings.open_input" = "打开输入窗口";
+"settings.open_sessions" = "打开会话";
+"settings.open_settings" = "打开设置";
+"settings.menu_label" = "菜单";
+"settings.behavior" = "行为";
+"settings.notifications" = "启用通知";
+"settings.appearance" = "外观";
+"settings.theme" = "主题";
+"settings.press_hotkey" = "按下新快捷键...";
+"settings.api_key_empty" = "请输入 API Key";
+"settings.using_cli" = "使用 Claude CLI 配置";
+
+/* Appearance */
+"appearance.system" = "跟随系统";
+"appearance.light" = "浅色";
+"appearance.dark" = "深色";
+
+/* Execution Account */
+"account.claude" = "默认 Claude 订阅";
+"account.coding_plan" = "CodingPlan 订阅";
+
+/* Toolbar */
+"toolbar.copy_plain" = "复制原文";
+"toolbar.copy_markdown" = "复制 Markdown";

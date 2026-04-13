@@ -77,7 +77,7 @@ struct HistoryView: View {
                 ForEach(TaskGroup.allCases) { group in
                     Label {
                         HStack {
-                            Text(group.rawValue)
+                            Text(group.displayName)
                             Spacer()
                             Text("\(countForGroup(group))")
                                 .font(.caption)
@@ -93,7 +93,7 @@ struct HistoryView: View {
             }
         }
         .listStyle(.sidebar)
-        .searchable(text: $searchText, placement: .sidebar, prompt: "搜索")
+        .searchable(text: $searchText, placement: .sidebar, prompt: Text(L10n.sessionsSearch))
     }
 
     // MARK: - 任务列表（NSOutlineView 桥接，支持单击选择 + 双击打开）
@@ -109,13 +109,13 @@ struct HistoryView: View {
         .navigationTitle("")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("删除", systemImage: "trash") {
+                Button(L10n.sessionsDelete, systemImage: "trash") {
                     if let selectedId = selectedTaskId {
                         deleteTask(id: selectedId)
                     }
                 }
                 .disabled(selectedTaskId == nil)
-                .help("删除选中任务")
+                .help(L10n.sessionsDeleteHelp)
             }
         }
     }
@@ -157,10 +157,10 @@ struct HistoryView: View {
                     .font(.system(size: 64))
                     .foregroundStyle(.quaternary)
                 VStack(spacing: 4) {
-                    Text("选择一条记录")
+                    Text(L10n.sessionsSelectRecord)
                         .font(.title3)
                         .foregroundStyle(.secondary)
-                    Text("或按 ⌘⇧Space 创建新任务")
+                    Text(L10n.sessionsCreateHint("⌘⇧Space"))
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
@@ -168,7 +168,7 @@ struct HistoryView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("新建", systemImage: "square.and.pencil") {
+                    Button(L10n.sessionsNew, systemImage: "square.and.pencil") {
                         InputWindowController.shared.show()
                     }
                 }
@@ -322,12 +322,12 @@ struct TaskDetailView: View {
             if task.status == .running {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("正在输入...")
+                    Text(L10n.taskTyping)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("停止", systemImage: "stop.fill") {
+                Button(L10n.taskStop, systemImage: "stop.fill") {
                     TaskManager.shared.stop(task: task)
                 }
                 .buttonStyle(.bordered)
@@ -338,11 +338,11 @@ struct TaskDetailView: View {
                     .foregroundStyle(.tertiary)
                     .font(.body)
 
-                TextField("继续追问...", text: $followUpText)
+                TextField(L10n.taskFollowUp, text: $followUpText)
                     .textFieldStyle(.plain)
                     .onSubmit { submitFollowUp() }
 
-                Button("发送") {
+                Button(L10n.taskSend) {
                     submitFollowUp()
                 }
                 .buttonStyle(.borderedProminent)
@@ -423,7 +423,7 @@ struct ChatBubble: View {
         if isStreaming && content.isEmpty {
             HStack(spacing: 4) {
                 TypingIndicator()
-                Text("正在输入...")
+                Text(L10n.taskTyping)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -473,7 +473,7 @@ struct TaskToolbarContent: ToolbarContent {
             toolbarContent
         }
         ToolbarItem(placement: .primaryAction) {
-            Button("新建", systemImage: "square.and.pencil") {
+            Button(L10n.sessionsNew, systemImage: "square.and.pencil") {
                 onNewTask()
             }
         }
@@ -483,27 +483,27 @@ struct TaskToolbarContent: ToolbarContent {
     private var toolbarContent: some View {
         // 停止按钮
         if let task = currentTask, task.status == .running {
-            Button("停止", systemImage: "stop.fill") {
+            Button(L10n.taskStop, systemImage: "stop.fill") {
                 TaskManager.shared.stop(task: task)
             }
-            .help("停止当前任务")
+            .help(L10n.taskStopHelp)
         }
 
         // 复制按钮 - 从 session.jsonl 读取最后一条 assistant 消息
         if let lastResponse = TaskStore.shared.getLastResponse(id: taskId), !lastResponse.isEmpty {
-            Button("复制", systemImage: "doc.on.doc") {
+            Button(L10n.taskCopy, systemImage: "doc.on.doc") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(lastResponse, forType: .string)
             }
-            .help("复制回复内容")
+            .help(L10n.taskCopyHelp)
         }
 
         // 打开目录按钮
         if let task = currentTask {
-            Button("目录", systemImage: "folder") {
+            Button(L10n.taskFolder, systemImage: "folder") {
                 NSWorkspace.shared.open(URL(fileURLWithPath: task.workDir))
             }
-            .help("打开工作目录")
+            .help(L10n.taskFolderHelp)
         }
     }
 

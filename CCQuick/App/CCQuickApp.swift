@@ -11,7 +11,7 @@ struct CCQuickApp: App {
         }
 
         // 历史窗口用 SwiftUI Window scene 管理，toolbar 完全由 SwiftUI 处理
-        Window("历史记录", id: "history") {
+        Window(L10n.sessionsTitle, id: "history") {
             HistoryView()
         }
         .defaultSize(width: 1000, height: 680)

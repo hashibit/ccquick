@@ -12,11 +12,11 @@ struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 // MARK: - 执行引擎
-                SettingsSection(title: "执行引擎") {
+                SettingsSection(title: L10n.settingsEngine) {
                     VStack(alignment: .leading, spacing: 16) {
                         // 执行账户选择
                         HStack {
-                            Text("执行账户")
+                            Text(L10n.settingsAccount)
                                 .frame(width: 100, alignment: .trailing)
                             Spacer()
                             Picker("", selection: $store.executionAccount) {
@@ -36,7 +36,7 @@ struct SettingsView: View {
                                     Text("API Key")
                                         .frame(width: 100, alignment: .trailing)
                                     Spacer()
-                                    SecureField("输入 API Key", text: $store.codingPlanApiKey)
+                                    SecureField(L10n.settingsApiKeyPlaceholder, text: $store.codingPlanApiKey)
                                         .textFieldStyle(.roundedBorder)
                                         .frame(width: 300)
                                         .onChange(of: store.codingPlanApiKey) { _, _ in
@@ -45,7 +45,7 @@ struct SettingsView: View {
                                 }
 
                                 // 提示信息
-                                Text("支持：Kimi、通义千问、DeepSeek、智谱、百炼等")
+                                Text(L10n.settingsApiKeyHint)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                     .padding(.leading, 100)
@@ -55,7 +55,7 @@ struct SettingsView: View {
                             HStack(spacing: 8) {
                                 Image(systemName: "info.circle")
                                     .foregroundColor(.secondary)
-                                Text("使用已登录的 Claude CLI 配置")
+                                Text(L10n.settingsClaudeHint)
                                     .foregroundColor(.secondary)
                                     .font(.system(size: 12))
                             }
@@ -77,9 +77,9 @@ struct SettingsView: View {
                                     ProgressView()
                                         .scaleEffect(0.7)
                                         .frame(width: 16, height: 16)
-                                    Text("检测中...")
+                                    Text(L10n.settingsChecking)
                                 } else {
-                                    Text("检测可用性")
+                                    Text(L10n.settingsCheckAvailability)
                                 }
                             }
                             .disabled(checker.isChecking || (store.executionAccount == .codingPlan && store.codingPlanApiKey.isEmpty))
@@ -105,10 +105,10 @@ struct SettingsView: View {
                 }
 
                 // MARK: - 快捷键
-                SettingsSection(title: "快捷键") {
+                SettingsSection(title: L10n.settingsHotkey) {
                     VStack(spacing: 0) {
                         HotkeyRecordingRow(
-                            title: "打开输入窗口",
+                            title: L10n.settingsOpenInput,
                             currentHotkey: store.hotkeyDisplayString,
                             isRecording: $isRecordingHotkey,
                             onRecord: { modifiers, keyCode in
@@ -118,24 +118,24 @@ struct SettingsView: View {
                             }
                         )
                         Divider()
-                        ShortcutRow(title: "打开历史记录", keys: ["菜单"])
+                        ShortcutRow(title: L10n.settingsOpenSessions, keys: [L10n.settingsMenuLabel])
                         Divider()
-                        ShortcutRow(title: "打开设置", keys: ["菜单"])
+                        ShortcutRow(title: L10n.settingsOpenSettings, keys: [L10n.settingsMenuLabel])
                     }
                 }
 
                 // MARK: - 行为
-                SettingsSection(title: "行为") {
+                SettingsSection(title: L10n.settingsBehavior) {
                     VStack(spacing: 0) {
-                        ToggleRow(title: "启用通知", isOn: $allowMentions)
+                        ToggleRow(title: L10n.settingsNotifications, isOn: $allowMentions)
                     }
                 }
 
                 // MARK: - 外观
-                SettingsSection(title: "外观") {
+                SettingsSection(title: L10n.settingsAppearance) {
                     VStack(spacing: 0) {
                         HStack {
-                            Text("主题")
+                            Text(L10n.settingsTheme)
                             Spacer()
                             Picker("", selection: $store.appearance) {
                                 ForEach(AppAppearance.allCases, id: \.self) { appearance in
@@ -292,7 +292,7 @@ struct HotkeyRecordingRow: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {
         if let button = context.coordinator.button {
-            button.title = isRecording ? "按下新快捷键..." : currentHotkey
+            button.title = isRecording ? L10n.settingsPressHotkey : currentHotkey
             button.highlight(isRecording)
         }
     }
@@ -320,7 +320,7 @@ struct HotkeyRecordingRow: NSViewRepresentable {
 
         private func startRecording() {
             parent.isRecording = true
-            button?.title = "按下新快捷键..."
+            button?.title = L10n.settingsPressHotkey
 
             monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self = self else { return event }

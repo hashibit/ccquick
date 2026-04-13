@@ -1,0 +1,94 @@
+/* Menu */
+"menu.invoke" = "호출…";
+"menu.sessions" = "세션…";
+"menu.settings" = "설정…";
+"menu.quit" = "CCQuick 종료";
+"menu.running_count" = "실행 중 (%d)";
+"menu.unviewed_count" = "완료, 미확인 (%d)";
+
+/* Log Window */
+"log.title" = "로그";
+"log.auto_scroll" = "자동 스크롤";
+"log.clear" = "지우기";
+"log.copy_all" = "전체 복사";
+
+/* Input */
+"input.placeholder" = "작업을 입력하고 Return으로 전송...";
+
+/* Sessions */
+"sessions.title" = "세션";
+"sessions.search" = "검색";
+"sessions.delete" = "삭제";
+"sessions.delete_help" = "선택한 작업 삭제";
+"sessions.select_record" = "세션을 선택하세요";
+"sessions.create_hint" = "%@ 키로 새 작업 만들기";
+"sessions.new" = "새로 만들기";
+
+/* Task */
+"task.detail_title" = "작업 상세";
+"task.stop" = "중지";
+"task.stop_help" = "현재 작업 중지";
+"task.copy" = "복사";
+"task.copy_help" = "응답 복사";
+"task.folder" = "폴더";
+"task.folder_help" = "작업 디렉토리 열기";
+"task.typing" = "입력 중...";
+"task.follow_up" = "추가 질문...";
+"task.send" = "전송";
+"task.no_output" = "(출력 없음)";
+"task.elapsed" = "소요 시간 %@";
+"task.fallback_name" = "작업";
+
+/* Status */
+"status.completed" = "완료";
+"status.failed" = "실패";
+"status.running" = "실행 중";
+"status.stopped" = "중지됨";
+"status.running_ellipsis" = "실행 중...";
+"status.no_content" = "내용 없음";
+
+/* Task Groups */
+"group.all" = "전체";
+"group.running" = "실행 중";
+"group.completed" = "완료";
+"group.failed" = "실패";
+"group.stopped" = "중지됨";
+
+/* Notifications */
+"notification.completed" = "작업 완료";
+"notification.completed_body" = "작업이 완료되었습니다";
+
+/* Settings */
+"settings.title" = "설정";
+"settings.engine" = "실행 엔진";
+"settings.account" = "계정";
+"settings.api_key_placeholder" = "API Key 입력";
+"settings.api_key_hint" = "지원: Kimi, 통의천문, DeepSeek, 지푸, 바이리안 등";
+"settings.claude_hint" = "로그인된 Claude CLI 설정 사용";
+"settings.checking" = "확인 중...";
+"settings.check_availability" = "가용성 확인";
+"settings.hotkey" = "단축키";
+"settings.open_input" = "입력 창 열기";
+"settings.open_sessions" = "세션 열기";
+"settings.open_settings" = "설정 열기";
+"settings.menu_label" = "메뉴";
+"settings.behavior" = "동작";
+"settings.notifications" = "알림 활성화";
+"settings.appearance" = "외관";
+"settings.theme" = "테마";
+"settings.press_hotkey" = "새 단축키를 누르세요...";
+"settings.api_key_empty" = "API Key를 입력하세요";
+"settings.using_cli" = "Claude CLI 설정 사용";
+
+/* Appearance */
+"appearance.system" = "시스템";
+"appearance.light" = "라이트";
+"appearance.dark" = "다크";
+
+/* Execution Account */
+"account.claude" = "Claude 구독";
+"account.coding_plan" = "CodingPlan 구독";
+
+/* Toolbar */
+"toolbar.copy_plain" = "텍스트 복사";
+"toolbar.copy_markdown" = "Markdown 복사";

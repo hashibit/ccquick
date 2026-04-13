@@ -24,7 +24,7 @@ struct ResultView: View {
     let task: CCTask
 
     private var prompt: String {
-        TaskStore.shared.getFirstPrompt(id: task.id) ?? "任务"
+        TaskStore.shared.getFirstPrompt(id: task.id) ?? L10n.taskFallbackName
     }
 
     private var response: String {
@@ -46,7 +46,7 @@ struct ResultView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        Text("耗时 \(task.elapsedString)")
+                        Text(L10n.taskElapsed(task.elapsedString))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -56,7 +56,7 @@ struct ResultView: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(response, forType: .string)
                 } label: {
-                    Label("复制", systemImage: "doc.on.doc")
+                    Label(L10n.taskCopy, systemImage: "doc.on.doc")
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -68,7 +68,7 @@ struct ResultView: View {
 
             // 响应内容
             ScrollView {
-                Text(response.isEmpty ? "（无输出）" : response)
+                Text(response.isEmpty ? L10n.taskNoOutput : response)
                     .font(.system(.body, design: .monospaced))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -81,19 +81,19 @@ struct ResultView: View {
     private var statusBadge: some View {
         switch task.status {
         case .completed:
-            Label("已完成", systemImage: "checkmark.circle.fill")
+            Label(L10n.statusCompleted, systemImage: "checkmark.circle.fill")
                 .font(.caption)
                 .foregroundStyle(.green)
         case .failed:
-            Label("失败", systemImage: "xmark.circle.fill")
+            Label(L10n.statusFailed, systemImage: "xmark.circle.fill")
                 .font(.caption)
                 .foregroundStyle(.red)
         case .running:
-            Label("运行中", systemImage: "arrow.clockwise.circle")
+            Label(L10n.statusRunning, systemImage: "arrow.clockwise.circle")
                 .font(.caption)
                 .foregroundStyle(.blue)
         case .stopped:
-            Label("已停止", systemImage: "hand.raised.fill")
+            Label(L10n.statusStopped, systemImage: "hand.raised.fill")
                 .font(.caption)
                 .foregroundStyle(.orange)
         }

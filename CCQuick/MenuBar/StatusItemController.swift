@@ -17,7 +17,7 @@ class LogWindowController: NSObject {
                 backing: .buffered,
                 defer: false
             )
-            newWindow.title = "日志"
+            newWindow.title = L10n.logTitle
             newWindow.center()
             newWindow.minSize = NSSize(width: 500, height: 300)
             newWindow.contentView = hostingView
@@ -64,10 +64,10 @@ struct LogView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Toggle("自动滚动", isOn: $autoScroll)
+                Toggle(L10n.logAutoScroll, isOn: $autoScroll)
                 Spacer()
-                Button("清空") { logManager.clear() }
-                Button("复制全部") {
+                Button(L10n.logClear) { logManager.clear() }
+                Button(L10n.logCopyAll) {
                     let text = logManager.logs.map { formatLogLine($0) }.joined(separator: "\n")
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(text, forType: .string)
@@ -297,27 +297,17 @@ class StatusItemController {
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
 
-        // 快速输入入口（备用）
-        let inputItem = NSMenuItem(title: "快速输入…", action: #selector(showInput), keyEquivalent: "")
+        // 唤起输入窗口
+        let inputItem = NSMenuItem(title: L10n.menuInvoke, action: #selector(showInput), keyEquivalent: "")
         inputItem.target = self
         menu.addItem(inputItem)
-
-        // 快捷键状态
-        let hotkeyStr = AppSettings.hotkeyDisplayString
-        let hotkeyItem = NSMenuItem(
-            title: "快捷键 \(hotkeyStr)",
-            action: #selector(showSettings),
-            keyEquivalent: ""
-        )
-        hotkeyItem.target = self
-        menu.addItem(hotkeyItem)
 
         menu.addItem(.separator())
 
         // 正在执行的任务
         let running = taskManager.runningTasks
         if !running.isEmpty {
-            let header = NSMenuItem(title: "正在执行 (\(running.count))", action: nil, keyEquivalent: "")
+            let header = NSMenuItem(title: L10n.menuRunningCount(running.count), action: nil, keyEquivalent: "")
             header.isEnabled = false
             menu.addItem(header)
 
@@ -337,7 +327,7 @@ class StatusItemController {
         // 已完成待查看
         let unviewed = taskManager.unviewedTasks
         if !unviewed.isEmpty {
-            let header = NSMenuItem(title: "已完成，待查看 (\(unviewed.count))", action: nil, keyEquivalent: "")
+            let header = NSMenuItem(title: L10n.menuUnviewedCount(unviewed.count), action: nil, keyEquivalent: "")
             header.isEnabled = false
             menu.addItem(header)
 
@@ -355,33 +345,29 @@ class StatusItemController {
             menu.addItem(.separator())
         }
 
-        // 历史记录
-        let historyItem = NSMenuItem(title: "历史记录…", action: #selector(showHistory), keyEquivalent: "")
+        // 会话
+        let historyItem = NSMenuItem(title: L10n.menuSessions, action: #selector(showHistory), keyEquivalent: "")
         historyItem.target = self
         menu.addItem(historyItem)
 
         // 设置
-        let settingsItem = NSMenuItem(title: "设置…", action: #selector(showSettings), keyEquivalent: "")
+        let settingsItem = NSMenuItem(title: L10n.menuSettings, action: #selector(showSettings), keyEquivalent: "")
         settingsItem.target = self
         menu.addItem(settingsItem)
 
         // 日志
-        let logItem = NSMenuItem(title: "日志…", action: #selector(showLog), keyEquivalent: "")
+        let logItem = NSMenuItem(title: L10n.logTitle, action: #selector(showLog), keyEquivalent: "")
         logItem.target = self
         menu.addItem(logItem)
 
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "退出 CCQuick", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: L10n.menuQuit, action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
 
         return menu
     }
 
     @objc private func showInput() {
         InputWindowController.shared.show()
-    }
-
-    @objc private func openAccessibilitySettings() {
-        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
     }
 
     @objc private func viewResult(_ sender: NSMenuItem) {
