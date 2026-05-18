@@ -1,6 +1,6 @@
 # CCQuick
 
-<img src="docs/assets/icon.png" width="80" alt="CCQuick Icon" />
+<img src="https://github.com/hashibit/ccquick/raw/main/docs/assets/icon.png" width="80" alt="CCQuick Icon" />
 
 A macOS menu bar application that executes AI-powered tasks via Claude Code, triggered by a global keyboard shortcut.
 
