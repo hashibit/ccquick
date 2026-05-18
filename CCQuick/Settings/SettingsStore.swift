@@ -1,6 +1,48 @@
 import Foundation
 import Carbon
 import SwiftUI
+import Security
+
+// MARK: - Keychain Helper
+
+enum KeychainHelper {
+    private static let service = "com.ccquick"
+
+    static func save(_ value: String, account: String) {
+        let data = Data(value.utf8)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        SecItemDelete(query as CFDictionary)
+        let addQuery = query.merging([kSecValueData as String: data]) { $1 }
+        SecItemAdd(addQuery as CFDictionary, nil)
+    }
+
+    static func load(account: String) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func delete(account: String) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+}
 
 // MARK: - 日志管理器
 
@@ -383,15 +425,46 @@ struct AppSettings: Codable {
 
     static var current: AppSettings = load()
 
+    enum CodingKeys: String, CodingKey {
+        case executionAccount, hotkeyModifiers, hotkeyKeyCode, appearance
+    }
+
     private static func load() -> AppSettings {
         guard let data = try? Data(contentsOf: fileURL),
               let decoded = try? JSONDecoder().decode(AppSettings.self, from: data) else {
-            return AppSettings()
+            let settings = AppSettings()
+            // Try to load API key from Keychain for new install
+            if let key = KeychainHelper.load(account: "codingPlanApiKey"), !key.isEmpty {
+                var newSettings = settings
+                newSettings.codingPlanApiKey = key
+                return newSettings
+            }
+            return settings
         }
-        return decoded
+        var settings = decoded
+
+        // Load API key from Keychain
+        if let key = KeychainHelper.load(account: "codingPlanApiKey"), !key.isEmpty {
+            settings.codingPlanApiKey = key
+        } else {
+            // Migration: read from old JSON if present
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let legacyKey = json["codingPlanApiKey"] as? String, !legacyKey.isEmpty {
+                KeychainHelper.save(legacyKey, account: "codingPlanApiKey")
+                settings.codingPlanApiKey = legacyKey
+            }
+        }
+        return settings
     }
 
     static func save(_ settings: AppSettings) {
+        // Save API key to Keychain
+        if settings.codingPlanApiKey.isEmpty {
+            KeychainHelper.delete(account: "codingPlanApiKey")
+        } else {
+            KeychainHelper.save(settings.codingPlanApiKey, account: "codingPlanApiKey")
+        }
+        // Save remaining settings to JSON (without API key)
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
         guard let data = try? encoder.encode(settings) else { return }
