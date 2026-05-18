@@ -283,6 +283,12 @@ struct TaskDetailView: View {
                     }
                 }
             }
+            .onChange(of: taskManager.streamingOutputs[taskId]?.count) { _, _ in
+                if task.status == .running {
+                    proxy.scrollTo("streaming-output", anchor: .bottom)
+                    proxy.scrollTo("streaming-followup", anchor: .bottom)
+                }
+            }
         }
     }
 
@@ -300,18 +306,22 @@ struct TaskDetailView: View {
             )
         }
 
-        // 正在运行但还没有 assistant 消息
+        // 正在运行但还没有 assistant 消息 —— 显示实时流式输出
         if task.status == .running && (messages.isEmpty || messages.last?.type == .user) {
-            ChatBubble(role: .assistant, content: "", time: nil, isStreaming: true)
+            let streamingContent = taskManager.streamingOutputs[taskId] ?? ""
+            ChatBubble(role: .assistant, content: streamingContent, time: nil, isStreaming: true)
+                .id("streaming-output")
         }
 
         // 刚提交追问，尚未写入 session.jsonl
         if task.status == .running
             && !pendingFollowUpText.isEmpty
             && messages.last?.content != pendingFollowUpText {
+            let streamingContent = taskManager.streamingOutputs[taskId] ?? ""
             ChatBubble(role: .user, content: pendingFollowUpText, time: nil)
                 .id("pending-followup")
-            ChatBubble(role: .assistant, content: "", time: nil, isStreaming: true)
+            ChatBubble(role: .assistant, content: streamingContent, time: nil, isStreaming: true)
+                .id("streaming-followup")
         }
     }
 

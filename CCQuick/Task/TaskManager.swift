@@ -9,6 +9,9 @@ class TaskManager {
     private(set) var unviewedTasks: [CCTask] = []
     private var processControllers: [String: ProcessController] = [:]
 
+    /// 实时流式输出，key 为 taskId
+    private(set) var streamingOutputs: [String: String] = [:]
+
     var onTaskCompleted: ((CCTask) -> Void)?
 
     private init() {
@@ -164,13 +167,16 @@ class TaskManager {
         }
 
         logInfo("启动 TaskRunner...", category: "Task")
-        TaskRunner.run(task: task, prompt: prompt, onOutput: { output in
+        streamingOutputs[task.id] = ""
+        TaskRunner.run(task: task, prompt: prompt, onOutput: { [weak self] output in
             logDebug("任务输出: \(output.prefix(100))", category: "Task")
+            self?.streamingOutputs[task.id, default: ""] += output
         }, onComplete: { [weak self] completed in
             guard let self = self else { return }
             logTaskCompleted(completed)
             self.runningTasks.removeAll { $0.id == completed.id }
             self.processControllers.removeValue(forKey: completed.id)
+            self.streamingOutputs.removeValue(forKey: completed.id)
             if completed.status == .completed {
                 self.unviewedTasks.append(completed)
             }
@@ -245,17 +251,20 @@ class TaskManager {
         }
 
         // 执行追问（--continue 自动恢复会话上下文）
+        streamingOutputs[runningTask.id] = ""
         TaskRunner.runFollowUp(
             task: runningTask,
             followUpPrompt: followUpPrompt,
-            onOutput: { output in
+            onOutput: { [weak self] output in
                 logDebug("追问输出: \(output.prefix(100))", category: "Task")
+                self?.streamingOutputs[runningTask.id, default: ""] += output
             },
             onComplete: { [weak self] completed in
                 guard let self = self else { return }
                 logTaskCompleted(completed)
                 self.runningTasks.removeAll { $0.id == completed.id }
                 self.processControllers.removeValue(forKey: completed.id)
+                self.streamingOutputs.removeValue(forKey: completed.id)
                 do {
                     try TaskStore.shared.save(completed)
                 } catch {
