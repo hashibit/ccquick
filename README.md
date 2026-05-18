@@ -1,5 +1,7 @@
 # CCQuick
 
+<img src="docs/assets/icon.png" width="80" alt="CCQuick Icon" />
+
 A macOS menu bar application that executes AI-powered tasks via Claude Code, triggered by a global keyboard shortcut.
 
 ## Features
@@ -13,12 +15,10 @@ A macOS menu bar application that executes AI-powered tasks via Claude Code, tri
 
 ## Screenshots
 
-<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
-  <img src="docs/assets/screenshot-20260513-115348.png" width="300" alt="Menu Bar Icon" />
-  <img src="docs/assets/screenshot-20260513-115414.png" width="300" alt="Input Window" />
-  <img src="docs/assets/screenshot-20260513-115430.png" width="300" alt="Settings" />
-  <img src="docs/assets/screenshot-20260513-115509.png" width="300" alt="Task History" />
-</div>
+| Menu Bar & Input | Settings & History |
+|---|---|
+| ![Menu Bar Icon](docs/assets/screenshot-20260513-115348.png) | ![Settings](docs/assets/screenshot-20260513-115430.png) |
+| ![Input Window](docs/assets/screenshot-20260513-115414.png) | ![Task History](docs/assets/screenshot-20260513-115509.png) |
 
 ## Requirements
 
