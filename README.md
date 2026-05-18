@@ -10,7 +10,8 @@ A macOS menu bar application that executes AI-powered tasks via Claude Code, tri
 - **Background Execution**: Run Claude Code tasks asynchronously without blocking the UI
 - **System Notifications**: Receive results via native macOS notifications
 - **Task History**: View previous tasks and their outputs
-- **Dual Execution Modes**: Support for both Claude subscriptions and Anthropic CodingPlan API
+- **Dual Execution Modes**: Run via local Claude CLI (subscription) or CodingPlan API — supports 百炼, Kimi, 通义千问, DeepSeek, 智谱, MiniMax
+- **Auto Provider Detection**: Enter any CodingPlan API key and the app probes all compatible providers in parallel to detect availability automatically
 - **Sandboxed Execution**: Secure file and command execution restricted to project directories
 
 ## Screenshots
@@ -52,7 +53,7 @@ The application runs as a menu bar icon. After building, drag the compiled app t
 2. Access Settings via the menu bar icon
 3. Choose execution account:
    - **Claude Subscription**: Uses local Claude CLI
-   - **CodingPlan API**: Requires Anthropic API key
+   - **CodingPlan API**: Enter your API key; the app auto-detects compatible providers (百炼, Kimi, 通义千问, DeepSeek, 智谱, MiniMax)
 4. Grant accessibility permissions when prompted (required for global hotkey)
 
 ## Architecture
