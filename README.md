@@ -78,8 +78,10 @@ CCQuick/
 
 ## Security
 
-- **File Sandboxing**: All file operations are restricted to project working directories
-- **Command Validation**: Bash commands are validated to prevent access outside sandbox
+- **File Access Restriction**: File operations (Read/Write) are restricted to project working directories
+- **Command Validation**: Bash commands are checked to prevent direct access to files outside the sandbox
+- **Limited Tool Set**: Only 4 tools available (Bash, Read, Write, Skill) — no arbitrary code execution
+- **Trust Model**: Bash has full system access, so security depends on trusting Claude API responses
 - **No Credential Storage**: API keys are stored in macOS Keychain via settings
 - **Open Source**: Full transparency on execution and data handling
 
