@@ -11,6 +11,15 @@ A macOS menu bar application that executes AI-powered tasks via Claude Code, tri
 - **Dual Execution Modes**: Support for both Claude subscriptions and Anthropic CodingPlan API
 - **Sandboxed Execution**: Secure file and command execution restricted to project directories
 
+## Screenshots
+
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+  <img src="docs/assets/screenshot-20260513-115348.png" width="300" alt="Menu Bar Icon" />
+  <img src="docs/assets/screenshot-20260513-115414.png" width="300" alt="Input Window" />
+  <img src="docs/assets/screenshot-20260513-115430.png" width="300" alt="Settings" />
+  <img src="docs/assets/screenshot-20260513-115509.png" width="300" alt="Task History" />
+</div>
+
 ## Requirements
 
 - macOS 12.0 or later
