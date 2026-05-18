@@ -82,7 +82,7 @@ CCQuick/
 - **Command Validation**: Bash commands are checked to prevent direct access to files outside the sandbox
 - **Limited Tool Set**: Only 4 tools available (Bash, Read, Write, Skill) — no arbitrary code execution
 - **Trust Model**: Bash has full system access, so security depends on trusting Claude API responses
-- **Local Configuration**: API keys and settings stored in `~/.ccquick/settings.json` (not encrypted)
+- **Secure Credential Storage**: API keys stored in macOS Keychain (encrypted); other settings in `~/.ccquick/settings.json`
 - **Open Source**: Full transparency on execution and data handling
 
 ## Technical Stack
