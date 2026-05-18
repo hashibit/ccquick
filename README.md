@@ -15,10 +15,10 @@ A macOS menu bar application that executes AI-powered tasks via Claude Code, tri
 
 ## Screenshots
 
-| Menu Bar & Input | Settings & History |
-|---|---|
-| ![Menu Bar Icon](https://github.com/hashibit/ccquick/raw/main/docs/assets/screenshot-20260513-115348.png) | ![Settings](https://github.com/hashibit/ccquick/raw/main/docs/assets/screenshot-20260513-115430.png) |
-| ![Input Window](https://github.com/hashibit/ccquick/raw/main/docs/assets/screenshot-20260513-115414.png) | ![Task History](https://github.com/hashibit/ccquick/raw/main/docs/assets/screenshot-20260513-115509.png) |
+![](https://github.com/hashibit/ccquick/raw/main/docs/assets/screenshot-20260513-115348.png)
+![](https://github.com/hashibit/ccquick/raw/main/docs/assets/screenshot-20260513-115414.png)
+![](https://github.com/hashibit/ccquick/raw/main/docs/assets/screenshot-20260513-115430.png)
+![](https://github.com/hashibit/ccquick/raw/main/docs/assets/screenshot-20260513-115509.png)
 
 ## Requirements
 
